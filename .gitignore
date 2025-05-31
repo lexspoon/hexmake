@@ -2,6 +2,5 @@
 *~
 
 # Build outputs
-/project/project
-/project/target
-/target
+out
+

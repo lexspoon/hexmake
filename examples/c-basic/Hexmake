@@ -1,0 +1,41 @@
+{
+  "rules": [
+    {
+      "inputs": [
+        "lib.c",
+        "lib.h"
+      ],
+      "outputs": [
+        "out/lib.o"
+      ],
+      "commands": [
+        "gcc -o out/lib.o -c lib.c"
+      ]
+    },
+    {
+      "inputs": [
+        "lib.h",
+        "main.c"
+      ],
+      "outputs": [
+        "out/main.o"
+      ],
+      "commands": [
+        "gcc -o out/main.o -c main.c"
+      ]
+    },
+    {
+      "inputs": [
+        "out/lib.o",
+        "out/main.o"
+      ],
+      "outputs": [
+        "out/main"
+      ],
+      "commands": [
+        "gcc -o out/main out/lib.o out/main.o",
+        "chmod 755 out/main"
+      ]
+    }
+  ]
+}
