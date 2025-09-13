@@ -1,0 +1,8 @@
+#!/bin/bash
+# Build and install Hexmake locally.
+# This uses the Cargo build and not itself so that it can
+# be easily bootstrapped on new machines.
+
+set -e
+
+cargo install --path .

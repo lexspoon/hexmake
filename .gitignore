@@ -1,6 +1,8 @@
 # Editor files
 *~
 
-# Build outputs
+# Hexmake build outputs
 out
 
+# Rust
+/target

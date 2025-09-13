@@ -1,27 +1,39 @@
 Hexmake
 =======
 
-Hexmake is the sparkly minimal build tool. It solves a
-problem that is hard to write on your own--an artifact-based
-build cache--while leaving the rest of your build
-to be scripted by hand or through an outside mechanism.
+Hexmake is Make but with some learnings from over the years:
 
-The core functionality of Hexmake is similar to Bazel, Pants, or Buck.
-Build artifacts are kept in a cache, where the cache is keyed
-by all the inputs to a build step: the command, the environment
-variables, and the hash code of all files used as inputs to the command.
-Build commands can then be chained into further build commands,
-in the style of Make.
+* Treat whole directory trees as inputs, not just
+  individual files.
+* Treat the command line and certain environment
+  variables as inputs.
+* Separate the build outputs into a separate directory
+  tree from the source code.
+* Use your own favorite scripting language for templating,
+  rather than having a crappy scripting language
+  build into the tool.
 
-To support interfacing with an external script, Hexmake is a CLI
-tool that reads a JSON file of the full graph of build steps that
-are available. The JSON files are reasonable to write by hand to get
-started, but most larger projects will generate the file from
-a Python script or other external framework.
+Compared to Nix:
 
-The name Hexmake is chosen because it is a variant of the "Make"
-tool, and because every other name based on "make" is taken
-by some other project. Cmake, for caching make? Taken. Bcache,
-for build cache? Taken. Bake? Forge? Cake? All taken.
+* Don't do things like recompile Firefox so that
+  your build is the same as someone else's. It's better
+  to let a developer set up their tools the way they like
+  and then to have each tool trust the other ones to do
+  what it is supposed to do.
 
-Hexmake. Add a little sparkle and magic to your build, with Hexmake.
+
+
+I hope you enjoy! Tell me about your experiments if you try
+it out.
+
+Some background reading about all of this:
+
+* [Recursive Make Considered Harmful](
+    https://aegis.sourceforge.net/auug97.pdf),
+  by Peter Miller.
+  This kicked off my thinking about what you want in
+  a build system.
+* [Recursive Maven Consided Harmful](
+      https://blog.lexspoon.org/2012/12/recursive-maven-considered-harmful.html),
+  by Lex Spoon.
+  This is my break down of the issue, a decade later.

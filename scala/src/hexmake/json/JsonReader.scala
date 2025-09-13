@@ -4,7 +4,6 @@ import java.io.Reader
 import scala.collection.immutable.ArraySeq
 import scala.reflect.ClassTag
 
-// TODO(lex) tests. all the public entry points. Each branch.
 class JsonReader(input: String):
   /** The position in [[input]] that is currently being looked at */
   private var inputPos = 0
