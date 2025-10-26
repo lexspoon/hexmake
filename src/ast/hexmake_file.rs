@@ -20,7 +20,7 @@ impl Display for HexmakeFile {
     }
 }
 
-#[derive(Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Hash, PartialEq)]
 /// One rule in a Hexmake file
 pub struct HexRule {
     pub name: RuleName,
@@ -29,7 +29,19 @@ pub struct HexRule {
     pub commands: Vec<String>,
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq, PartialOrd, Ord)]
+impl HexRule {
+    #[cfg(test)]
+    pub fn new(name: RuleName) -> HexRule {
+        HexRule {
+            name,
+            outputs: vec![],
+            inputs: vec![],
+            commands: vec![],
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(transparent)]
 pub struct RuleName {
     pub name: Rc<String>,
@@ -127,21 +139,21 @@ mod tests {
                         name: "out/lib.o".to_string().into(),
                         outputs: vec![HexPath::from("out/lib.o")],
                         inputs: vec![HexPath::from("lib.c"), HexPath::from("lib.h")],
-                        commands: vec!["gcc -o out/lib.o -c lib.c".to_string().into()]
+                        commands: vec!["gcc -o out/lib.o -c lib.c".to_string()]
                     }
                     .into(),
                     HexRule {
                         name: "out/main.o".to_string().into(),
                         outputs: vec![HexPath::from("out/main.o")],
                         inputs: vec![HexPath::from("lib.h"), HexPath::from("main.c")],
-                        commands: vec!["gcc -o out/main.o -c main.c".to_string().into()]
+                        commands: vec!["gcc -o out/main.o -c main.c".to_string()]
                     }
                     .into(),
                     HexRule {
                         name: "out/main".to_string().into(),
                         outputs: vec![HexPath::from("out/main")],
                         inputs: vec![HexPath::from("out/lib.o"), HexPath::from("out/main.o")],
-                        commands: vec!["gcc -o out/main out/lib.o out/main.o".to_string().into()]
+                        commands: vec!["gcc -o out/main out/lib.o out/main.o".to_string()]
                     }
                     .into()
                 ]

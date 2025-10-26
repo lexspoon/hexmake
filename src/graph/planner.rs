@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::collections::BTreeSet;
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use crate::ast::hex_path::HexPath;
@@ -13,9 +14,13 @@ pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Rc<String>>) -> BuildPla
     Planner::new(hex_file).plan(targets)
 }
 
-pub type BuildPlan = BTreeMap<RuleName, RefCell<Task>>;
+pub struct BuildPlan {
+    pub target_rules: BTreeSet<RuleName>,
+    pub tasks: BTreeMap<RuleName, RefCell<Task>>,
+}
 
 struct Planner {
+    target_rules: BTreeSet<RuleName>,
     rule_map: BTreeMap<RuleName, Rc<HexRule>>,
     rule_by_output: BTreeMap<HexPath, RuleName>,
     task_for_rule: BTreeMap<RuleName, RefCell<Task>>,
@@ -23,6 +28,7 @@ struct Planner {
 
 impl Planner {
     fn new(hex_file: &HexmakeFile) -> Self {
+        let target_rules: BTreeSet<RuleName> = BTreeSet::new();
         let mut rule_map = BTreeMap::new();
         let mut rule_by_output = BTreeMap::new();
 
@@ -35,6 +41,7 @@ impl Planner {
 
         let task_for_rule = BTreeMap::new();
         Self {
+            target_rules,
             rule_map,
             rule_by_output,
             task_for_rule,
@@ -43,10 +50,14 @@ impl Planner {
 
     fn plan(mut self, targets: &Vec<Rc<String>>) -> BuildPlan {
         for target in targets {
-            self.plan_one_target(target);
+            let target_rule_name = self.plan_one_target(target);
+            self.target_rules.insert(target_rule_name);
         }
 
-        self.task_for_rule
+        BuildPlan {
+            target_rules: self.target_rules,
+            tasks: self.task_for_rule,
+        }
     }
 
     /// Plan the build for one target, updating the fields of the
@@ -243,7 +254,7 @@ mod tests {
     /// Generate a string summary of a build plan for testing
     fn build_plan_summary(build_plan: &BuildPlan) -> String {
         let mut result = String::new();
-        for task in build_plan.values() {
+        for task in build_plan.tasks.values() {
             let task = task.borrow();
             result.push_str(&format!("Task: {}\n", task.rule_name()));
             if !task.depends_on.is_empty() {
@@ -262,16 +273,21 @@ mod tests {
     /// Internal consistency checks for a build plan
     #[track_caller]
     fn check_build_plan(build_plan: &BuildPlan) {
-        for task in build_plan.values() {
+        for task in build_plan.tasks.values() {
             let task = task.borrow();
 
             // Check that deps and used_by are inverses
             for dep in &task.depends_on {
-                assert!(build_plan[dep].borrow().used_by.contains(&task.rule_name()));
+                assert!(
+                    build_plan.tasks[dep]
+                        .borrow()
+                        .used_by
+                        .contains(&task.rule_name())
+                );
             }
             for used_by in &task.used_by {
                 assert!(
-                    build_plan[used_by]
+                    build_plan.tasks[used_by]
                         .borrow()
                         .depends_on
                         .contains(&task.rule_name())

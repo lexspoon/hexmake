@@ -7,7 +7,7 @@ int main(int argc, char **argv)
 {
   if (argc != 3) 
     {
-      printf("Usage: sum a b\n");
+      printf("Usage: main a b\n");
       return 1;
     }
 

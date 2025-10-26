@@ -3,6 +3,10 @@
 
 # Hexmake build outputs
 out
+.hex
 
 # Rust
 /target
+
+# Other
+/notes

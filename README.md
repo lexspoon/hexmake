@@ -6,7 +6,7 @@ Hexmake is Make but with some learnings from over the years:
 * Treat whole directory trees as inputs, not just
   individual files.
 * Treat the command line and certain environment
-  variables as inputs.
+  variables as inputs. Rebuild if they change.
 * Separate the build outputs into a separate directory
   tree from the source code.
 * Use your own favorite scripting language for templating,
@@ -20,7 +20,6 @@ Compared to Nix:
   to let a developer set up their tools the way they like
   and then to have each tool trust the other ones to do
   what it is supposed to do.
-
 
 
 I hope you enjoy! Tell me about your experiments if you try

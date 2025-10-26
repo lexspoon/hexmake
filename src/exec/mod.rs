@@ -1,5 +1,6 @@
 //! Execution of a build
 
-mod build_dir;
+pub mod build_dir;
 pub mod conductor;
-mod rule_builder;
+pub mod rule_builder;
+

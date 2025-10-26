@@ -1,10 +1,12 @@
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
+use std::path::Path;
 use std::rc::Rc;
 
 use serde::Deserialize;
 
 /// A path that can be built and/or used as source code.
-#[derive(Debug, Deserialize, Clone, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(transparent)]
 pub struct HexPath {
     pub path: Rc<String>,
@@ -48,6 +50,20 @@ impl From<&Rc<String>> for HexPath {
 impl Display for HexPath {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "{}", self.path)
+    }
+}
+
+impl Deref for HexPath {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        &self.path
+    }
+}
+
+impl AsRef<Path> for &HexPath {
+    fn as_ref(&self) -> &Path {
+        Path::new(&*self.path)
     }
 }
 
