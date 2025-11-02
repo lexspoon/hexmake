@@ -1,6 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
-    rc::Rc,
+    sync::Arc,
 };
 
 use crate::ast::hex_path::HexPath;
@@ -10,8 +10,8 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct HexmakeFile {
     #[serde(default)]
-    pub environ: Vec<Rc<String>>,
-    pub rules: Vec<Rc<HexRule>>,
+    pub environ: Vec<Arc<String>>,
+    pub rules: Vec<Arc<HexRule>>,
 }
 
 impl Display for HexmakeFile {
@@ -44,7 +44,7 @@ impl HexRule {
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(transparent)]
 pub struct RuleName {
-    pub name: Rc<String>,
+    pub name: Arc<String>,
 }
 
 impl Display for RuleName {
@@ -56,13 +56,13 @@ impl Display for RuleName {
 impl From<String> for RuleName {
     fn from(name: String) -> Self {
         RuleName {
-            name: Rc::new(name),
+            name: Arc::new(name),
         }
     }
 }
 
-impl From<&Rc<String>> for RuleName {
-    fn from(name: &Rc<String>) -> Self {
+impl From<&Arc<String>> for RuleName {
+    fn from(name: &Arc<String>) -> Self {
         RuleName { name: name.clone() }
     }
 }
@@ -70,7 +70,7 @@ impl From<&Rc<String>> for RuleName {
 impl From<&str> for RuleName {
     fn from(name: &str) -> Self {
         RuleName {
-            name: Rc::new(name.to_string()),
+            name: Arc::new(name.to_string()),
         }
     }
 }

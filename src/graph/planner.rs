@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
-use std::collections::BTreeSet;
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use std::collections::{BTreeMap, BTreeSet};
+use std::sync::{Arc, Mutex};
 
 use crate::ast::hex_path::HexPath;
 use crate::ast::hexmake_file::{HexRule, HexmakeFile, RuleName};
@@ -10,20 +10,20 @@ use crate::graph::task::Task;
 /// Make a plan for building the given targets.
 /// The targets can be either the names of outputs or
 /// the names of rules.
-pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Rc<String>>) -> BuildPlan {
+pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Arc<String>>) -> BuildPlan {
     Planner::new(hex_file).plan(targets)
 }
 
 pub struct BuildPlan {
     pub target_rules: BTreeSet<RuleName>,
-    pub tasks: BTreeMap<RuleName, RefCell<Task>>,
+    pub tasks: BTreeMap<RuleName, Arc<Mutex<Task>>>,
 }
 
 struct Planner {
     target_rules: BTreeSet<RuleName>,
-    rule_map: BTreeMap<RuleName, Rc<HexRule>>,
+    rule_map: BTreeMap<RuleName, Arc<HexRule>>,
     rule_by_output: BTreeMap<HexPath, RuleName>,
-    task_for_rule: BTreeMap<RuleName, RefCell<Task>>,
+    task_for_rule: BTreeMap<RuleName, Arc<Mutex<Task>>>,
 }
 
 impl Planner {
@@ -48,7 +48,7 @@ impl Planner {
         }
     }
 
-    fn plan(mut self, targets: &Vec<Rc<String>>) -> BuildPlan {
+    fn plan(mut self, targets: &Vec<Arc<String>>) -> BuildPlan {
         for target in targets {
             let target_rule_name = self.plan_one_target(target);
             self.target_rules.insert(target_rule_name);
@@ -63,7 +63,7 @@ impl Planner {
     /// Plan the build for one target, updating the fields of the
     /// planner as it goes. Return the rule name for building the
     /// one requested target.
-    fn plan_one_target(&mut self, target: &Rc<String>) -> RuleName {
+    fn plan_one_target(&mut self, target: &Arc<String>) -> RuleName {
         let target_as_path = HexPath::from(target);
         let rule_name = if target_as_path.is_output() {
             // It's an output. Find the rule that goes with it.
@@ -81,18 +81,18 @@ impl Planner {
 
         // Make a new task
         let rule = self.rule_map[&rule_name].clone();
-        let mut task = Task::new(rule.clone());
+        let task = Arc::new(Mutex::new(Task::new(rule.clone())));
 
         // Add subtasks for inputs
         for input in &rule.inputs {
             if input.is_output() {
                 let input_rule_name = self.plan_one_target(&input.path);
                 let sub_task = &self.task_for_rule[&input_rule_name];
-                task.add_depends_on(&mut sub_task.borrow_mut());
+                Task::add_dependency(&task, sub_task);
             }
         }
 
-        self.task_for_rule.insert(rule_name.clone(), task.into());
+        self.task_for_rule.insert(rule_name.clone(), task);
 
         rule_name
     }
@@ -255,42 +255,53 @@ mod tests {
     fn build_plan_summary(build_plan: &BuildPlan) -> String {
         let mut result = String::new();
         for task in build_plan.tasks.values() {
-            let task = task.borrow();
+            let task = task.lock().unwrap();
             result.push_str(&format!("Task: {}\n", task.rule_name()));
             if !task.depends_on.is_empty() {
                 result.push_str(&format!(
                     "  Depends on tasks: {}\n",
-                    join(&task.depends_on, ", ")
+                    task_list_summary(&task.depends_on),
                 ));
             }
             if !task.used_by.is_empty() {
-                result.push_str(&format!("  Used by tasks: {}\n", join(&task.used_by, ", ")));
+                result.push_str(&format!(
+                    "  Used by tasks: {}\n",
+                    task_list_summary(&task.used_by)
+                ));
             }
         }
         result
+    }
+
+    /// Summarize a list of tasks by combining their rule names between commas
+    fn task_list_summary(tasks: &[Arc<Mutex<Task>>]) -> String {
+        join(tasks.iter().map(|t| t.lock().unwrap().rule_name()), ", ")
     }
 
     /// Internal consistency checks for a build plan
     #[track_caller]
     fn check_build_plan(build_plan: &BuildPlan) {
         for task in build_plan.tasks.values() {
-            let task = task.borrow();
+            let rule_name = { task.lock().unwrap().rule_name() };
 
             // Check that deps and used_by are inverses
-            for dep in &task.depends_on {
+            for dep in &{ task.lock().unwrap().depends_on.clone() } {
                 assert!(
-                    build_plan.tasks[dep]
-                        .borrow()
+                    dep.lock()
+                        .unwrap()
                         .used_by
-                        .contains(&task.rule_name())
+                        .iter()
+                        .any(|t| t.lock().unwrap().rule_name() == rule_name)
                 );
             }
-            for used_by in &task.used_by {
+
+            for used_by in &{ task.lock().unwrap().used_by.clone() } {
                 assert!(
-                    build_plan.tasks[used_by]
-                        .borrow()
-                        .depends_on
-                        .contains(&task.rule_name())
+                    used_by.lock().unwrap().depends_on.iter().any(|t| t
+                        .lock()
+                        .unwrap()
+                        .rule_name()
+                        == rule_name)
                 );
             }
         }

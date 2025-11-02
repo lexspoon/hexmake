@@ -7,14 +7,13 @@ mod graph;
 
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::{env, io};
 
 use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
-use crate::file_system::posix::PosixFileSystem;
 use crate::graph::planner::plan_build;
 
 fn main() {
@@ -30,16 +29,16 @@ fn main_internal() -> Result<(), io::Error> {
     let plan = plan_build(&hexmake_file, &targets);
     let env = get_environment(&hexmake_file);
 
-    let mut build_cache = BuildCache::new(PosixFileSystem::default(), env)?;
+    let build_cache = Arc::new(BuildCache::new(env)?);
 
-    conduct_build(&plan, &mut build_cache)?;
+    conduct_build(&plan, &build_cache)?;
 
     Ok(())
 }
 
 /// Parse the command line arguments
-fn parse_arguments() -> Vec<Rc<String>> {
-    let result: Vec<Rc<String>> = env::args().skip(1).map(Rc::new).collect();
+fn parse_arguments() -> Vec<Arc<String>> {
+    let result: Vec<Arc<String>> = env::args().skip(1).map(Arc::new).collect();
 
     if result.is_empty() {
         usage_exit();
@@ -69,14 +68,14 @@ fn load_hexmake_file() -> HexmakeFile {
 }
 
 /// Make a map of the environment variables that should be passed through
-fn get_environment(hexmake_file: &HexmakeFile) -> Rc<BTreeMap<Rc<String>, Rc<String>>> {
+fn get_environment(hexmake_file: &HexmakeFile) -> Arc<BTreeMap<Arc<String>, Arc<String>>> {
     let mut result = BTreeMap::new();
 
     for variable in &hexmake_file.environ {
         if let Ok(value) = env::var(variable.as_str()) {
-            result.insert(variable.clone(), Rc::new(value));
+            result.insert(variable.clone(), Arc::new(value));
         }
     }
 
-    Rc::new(result)
+    Arc::new(result)
 }

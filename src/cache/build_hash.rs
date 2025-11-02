@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io;
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use ring::digest::{Context, Digest, SHA256};
 
@@ -38,7 +38,7 @@ impl BuildHash {
     /// Construct a build hash from the given rule and filesystem state
     pub fn hash<Vfs: VirtualFileSystem>(
         vfs: &Vfs,
-        env: &BTreeMap<Rc<String>, Rc<String>>,
+        env: &BTreeMap<Arc<String>, Arc<String>>,
         rule: &HexRule,
     ) -> Result<BuildHash, io::Error> {
         let mut context = Context::new(&SHA256);
@@ -93,7 +93,7 @@ fn hash_rule(context: &mut Context, rule: &HexRule) {
 
 /// Hash the environment variables. This will encode the number of variables
 /// followed by the name and value of each variable.
-fn hash_env(context: &mut Context, env: &BTreeMap<Rc<String>, Rc<String>>) {
+fn hash_env(context: &mut Context, env: &BTreeMap<Arc<String>, Arc<String>>) {
     hash_usize(context, env.len());
     for (name, value) in env {
         hash_string(context, name);
@@ -184,11 +184,11 @@ mod tests {
         rule.inputs = vec!["test.txt".into()];
         rule.commands = vec!["cp test.txt out/text.txt".into()];
 
-        let mut env: BTreeMap<Rc<String>, Rc<String>> = BTreeMap::new();
+        let mut env: BTreeMap<Arc<String>, Arc<String>> = BTreeMap::new();
         env.insert("ENV1".to_string().into(), "env1".to_string().into());
         env.insert("ENV2".to_string().into(), "env2".to_string().into());
 
-        let mut vfs = FakeFileSystem::default();
+        let vfs = FakeFileSystem::default();
         vfs.write(&"test.txt".into(), b"test").unwrap();
         vfs.write(&"out/test.txt".into(), b"test").unwrap();
 
@@ -208,7 +208,7 @@ mod tests {
 
         // Changing an input file will affect the hash
         {
-            let mut vfs = vfs.clone();
+            let vfs = vfs.clone();
             vfs.write(&"test.txt".into(), b"test2").unwrap();
             let hash = BuildHash::hash(&vfs, &env, &rule).unwrap();
             test_hashes.push(hash);
@@ -216,7 +216,7 @@ mod tests {
 
         // Changing an output file will not affect the hash
         {
-            let mut vfs = vfs.clone();
+            let vfs = vfs.clone();
             vfs.write(&"out/test.txt".into(), b"test2").unwrap();
             let hash = BuildHash::hash(&vfs, &env, &rule).unwrap();
             assert_eq!(hash, base_hash);

@@ -11,12 +11,12 @@ use crate::{ast::hex_path::HexPath, file_system::vfs::VirtualFileSystem};
 pub struct PosixFileSystem {}
 
 impl VirtualFileSystem for PosixFileSystem {
-    fn copy(&mut self, source: &HexPath, destination: &HexPath) -> Result<(), io::Error> {
+    fn copy(&self, source: &HexPath, destination: &HexPath) -> Result<(), io::Error> {
         fs::copy(source, destination)?;
         Ok(())
     }
 
-    fn create_dir_all(&mut self, path: &HexPath) -> Result<(), io::Error> {
+    fn create_dir_all(&self, path: &HexPath) -> Result<(), io::Error> {
         fs::create_dir_all(path)
     }
 
@@ -55,22 +55,22 @@ impl VirtualFileSystem for PosixFileSystem {
         fs::read(path)
     }
 
-    fn remove_file(&mut self, path: &HexPath) -> Result<(), io::Error> {
+    fn remove_file(&self, path: &HexPath) -> Result<(), io::Error> {
         fs::remove_file(path)
     }
 
-    fn rename(&mut self, old_path: &HexPath, new_path: &HexPath) -> Result<(), io::Error> {
+    fn rename(&self, old_path: &HexPath, new_path: &HexPath) -> Result<(), io::Error> {
         fs::rename(old_path, new_path)
     }
 
-    fn touch(&mut self, path: &HexPath) -> Result<(), io::Error> {
+    fn touch(&self, path: &HexPath) -> Result<(), io::Error> {
         // Open the file in append mode. This should update the modification
         // time.
         let _ = OpenOptions::new().append(true).create(true).open(path)?;
         Ok(())
     }
 
-    fn write(&mut self, path: &HexPath, contents: &[u8]) -> Result<(), io::Error> {
+    fn write(&self, path: &HexPath, contents: &[u8]) -> Result<(), io::Error> {
         // So that the write is atomic, write to a side file and then rename it
         let side_file = format!("{}.tmp", path);
 

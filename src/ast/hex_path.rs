@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use serde::Deserialize;
 
@@ -9,11 +9,11 @@ use serde::Deserialize;
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
 #[serde(transparent)]
 pub struct HexPath {
-    pub path: Rc<String>,
+    pub path: Arc<String>,
 }
 
 impl HexPath {
-    pub fn new(path: Rc<String>) -> HexPath {
+    pub fn new(path: Arc<String>) -> HexPath {
         HexPath { path }
     }
 
@@ -31,18 +31,18 @@ impl HexPath {
 
 impl From<&str> for HexPath {
     fn from(path: &str) -> Self {
-        HexPath::new(Rc::new(path.to_string()))
+        HexPath::new(Arc::new(path.to_string()))
     }
 }
 
 impl From<String> for HexPath {
     fn from(path: String) -> Self {
-        HexPath::new(Rc::new(path))
+        HexPath::new(Arc::new(path))
     }
 }
 
-impl From<&Rc<String>> for HexPath {
-    fn from(path: &Rc<String>) -> Self {
+impl From<&Arc<String>> for HexPath {
+    fn from(path: &Arc<String>) -> Self {
         HexPath::new(path.clone())
     }
 }

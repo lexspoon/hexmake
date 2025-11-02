@@ -1,24 +1,24 @@
-#![allow(unused)] // TODO(lex)
-
 use std::collections::BTreeMap;
 use std::io;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::ast::hex_path::HexPath;
 use crate::cache::build_hash::BuildHash;
+use crate::file_system::posix::PosixFileSystem;
 use crate::{ast::hexmake_file::HexRule, file_system::vfs::VirtualFileSystem};
 
 /// A cache of previously built outputs
-pub struct BuildCache<Vfs: VirtualFileSystem> {
+pub struct BuildCache {
     root: HexPath,
-    vfs: Vfs,
-    env: Rc<BTreeMap<Rc<String>, Rc<String>>>,
+    vfs: PosixFileSystem,
+    env: Arc<BTreeMap<Arc<String>, Arc<String>>>,
 }
 
-impl<Vfs: VirtualFileSystem> BuildCache<Vfs> {
-    pub fn new(mut vfs: Vfs, env: Rc<BTreeMap<Rc<String>, Rc<String>>>) -> Result<Self, io::Error> {
+impl BuildCache {
+    pub fn new(env: Arc<BTreeMap<Arc<String>, Arc<String>>>) -> Result<Self, io::Error> {
         let root = HexPath::from(".hex/cache");
 
+        let vfs = PosixFileSystem::default();
         vfs.create_dir_all(&root.child("inputmaps"))?;
         vfs.create_dir_all(&root.child("outputs"))?;
 
@@ -27,7 +27,7 @@ impl<Vfs: VirtualFileSystem> BuildCache<Vfs> {
 
     /// Try to retrieve previously built outputs of the given rule.
     /// Return Ok(true) if there was a cache hit and the retrieval succeeded.
-    pub fn retrieve_outputs(&mut self, rule: &HexRule) -> Result<bool, io::Error> {
+    pub fn retrieve_outputs(&self, rule: &HexRule) -> Result<bool, io::Error> {
         let rule_hash = BuildHash::hash(&self.vfs, &self.env, rule)?;
         let inputmap_path = self.root.child("inputmaps").child(&rule_hash);
         if !self.vfs.is_file(&inputmap_path)? {
@@ -46,7 +46,7 @@ impl<Vfs: VirtualFileSystem> BuildCache<Vfs> {
     }
 
     /// Add build outputs to the cache
-    pub fn insert_outputs(&mut self, rule: &HexRule) -> Result<(), io::Error> {
+    pub fn insert_outputs(&self, rule: &HexRule) -> Result<(), io::Error> {
         let mut inputmap = String::new();
         for output_path in rule.outputs.iter() {
             // Copy the output to the cached dir
@@ -66,7 +66,8 @@ impl<Vfs: VirtualFileSystem> BuildCache<Vfs> {
     }
 
     /// Garbage collect the cache if it is has grown too large
-    pub fn maybe_gc(&mut self) -> Result<(), io::Error> {
+    #[allow(unused)]
+    pub fn maybe_gc(&self) -> Result<(), io::Error> {
         // Not yet implemented
 
         // Scan the directory tree to see how large all the binaries are
