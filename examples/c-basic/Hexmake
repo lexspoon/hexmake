@@ -10,7 +10,7 @@
         "out/lib.o"
       ],
       "commands": [
-        "gcc -o out/lib.o -c lib.c"
+        "cc -o out/lib.o -c lib.c"
       ]
     },
     {
@@ -23,7 +23,7 @@
         "out/main.o"
       ],
       "commands": [
-        "gcc -o out/main.o -c main.c"
+        "cc -o out/main.o -c main.c"
       ]
     },
     {
@@ -36,7 +36,7 @@
         "out/main"
       ],
       "commands": [
-        "gcc -o out/main out/lib.o out/main.o",
+        "cc -o out/main out/lib.o out/main.o",
         "chmod 755 out/main"
       ]
     }
