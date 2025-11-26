@@ -41,6 +41,12 @@ impl From<String> for HexPath {
     }
 }
 
+impl From<&String> for HexPath {
+    fn from(path: &String) -> Self {
+        HexPath::new(Arc::new(path.to_string()))
+    }
+}
+
 impl From<&Arc<String>> for HexPath {
     fn from(path: &Arc<String>) -> Self {
         HexPath::new(path.clone())

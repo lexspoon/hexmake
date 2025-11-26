@@ -5,6 +5,7 @@ use std::{fs, io};
 
 use crate::cache::build_cache::BuildCache;
 use crate::exec::rule_builder::build_rule;
+use crate::exec::work_dir::WorkDirManager;
 use crate::graph::planner::BuildPlan;
 use crate::graph::task::Task;
 use crossbeam_channel::{Receiver, Sender};
@@ -82,6 +83,8 @@ fn run_worker_internal(
     task_finished: &Condvar,
     build_cache: Arc<BuildCache>,
 ) -> Result<(), io::Error> {
+    let work_dir = WorkDirManager::new(worker_id);
+
     while let Ok(task) = task_receiver.recv() {
         let mut task = task.lock().unwrap();
 
@@ -93,7 +96,7 @@ fn run_worker_internal(
             );
         } else {
             // The rule needs its commands run
-            build_rule(worker_id, &task.rule);
+            build_rule(worker_id, &task.rule, &work_dir);
             build_cache.insert_outputs(&task.rule)?;
         }
 

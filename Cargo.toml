@@ -8,6 +8,7 @@ name = "hexmake"
 
 [dependencies]
 crossbeam-channel = "0.5.15"
+ignore = "0.4.25"
 itertools = "0.14.0"
 regex = "1.12.2"
 ring = "0.17.14"
