@@ -1,6 +1,6 @@
 use std::fs::{copy, create_dir_all, remove_dir_all};
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::ast::hex_path::HexPath;
 use ignore::Walk;
@@ -48,22 +48,13 @@ impl WorkDirManager {
     pub fn copy_inputs(&self, inputs: &[HexPath]) -> io::Result<()> {
         for input in inputs {
             let src = Path::new(input.as_ref());
+            let dst = Path::new(&self.root_dir).join(input.as_ref());
 
             if src.is_file() {
-                // Handle single file
-                let dst = Path::new(&self.root_dir).join(input.as_ref());
-
-                // Create parent directories if needed
-                if let Some(parent) = dst.parent() {
-                    create_dir_all(parent)?;
-                }
-
-                // Copy the file
-                copy(src, &dst)?;
+                copy_one_file(src, dst)?;
             } else if src.is_dir() {
-                // Handle directory tree - use ignore crate to respect .gitignore
-                for result in Walk::new(src) {
-                    let entry = result.map_err(io::Error::other)?;
+                for entry in Walk::new(src) {
+                    let entry = entry.map_err(io::Error::other)?;
                     let entry_path = entry.path();
 
                     // Skip the root directory itself
@@ -75,21 +66,13 @@ impl WorkDirManager {
                     let relative_path = entry_path.strip_prefix(src).map_err(io::Error::other)?;
 
                     // Construct destination path preserving the input's base path
-                    let dst = Path::new(&self.root_dir)
-                        .join(input.as_ref())
-                        .join(relative_path);
+                    let dst = dst.join(relative_path);
 
                     if entry_path.is_dir() {
                         // Create the directory
                         create_dir_all(&dst)?;
                     } else if entry_path.is_file() {
-                        // Create parent directories if needed
-                        if let Some(parent) = dst.parent() {
-                            create_dir_all(parent)?;
-                        }
-
-                        // Copy the file
-                        copy(entry_path, &dst)?;
+                        copy_one_file(entry_path, dst)?;
                     }
                 }
             } else {
@@ -135,6 +118,15 @@ impl WorkDirManager {
         }
         Ok(())
     }
+}
+
+/// Copy one file
+fn copy_one_file(src: &Path, dst: PathBuf) -> Result<(), io::Error> {
+    if let Some(parent) = dst.parent() {
+        create_dir_all(parent)?;
+    }
+    copy(src, &dst)?;
+    Ok(())
 }
 
 #[cfg(test)]

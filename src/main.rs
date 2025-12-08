@@ -2,7 +2,6 @@ mod ast;
 mod cache;
 mod error_exit;
 mod exec;
-mod file_system;
 mod graph;
 
 use std::collections::BTreeMap;

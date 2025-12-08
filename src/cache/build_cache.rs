@@ -1,16 +1,15 @@
 use std::collections::BTreeMap;
-use std::io;
 use std::sync::Arc;
+use std::{fs, io};
 
 use crate::ast::hex_path::HexPath;
+use crate::ast::hexmake_file::HexRule;
 use crate::cache::build_hash::BuildHash;
-use crate::file_system::posix::PosixFileSystem;
-use crate::{ast::hexmake_file::HexRule, file_system::vfs::VirtualFileSystem};
+use std::path::Path;
 
 /// A cache of previously built outputs
 pub struct BuildCache {
     root: HexPath,
-    vfs: PosixFileSystem,
     env: Arc<BTreeMap<Arc<String>, Arc<String>>>,
 }
 
@@ -18,29 +17,29 @@ impl BuildCache {
     pub fn new(env: Arc<BTreeMap<Arc<String>, Arc<String>>>) -> Result<Self, io::Error> {
         let root = HexPath::from(".hex/cache");
 
-        let vfs = PosixFileSystem::default();
-        vfs.create_dir_all(&root.child("inputmaps"))?;
-        vfs.create_dir_all(&root.child("outputs"))?;
+        fs::create_dir_all(&root.child("inputmaps"))?;
+        fs::create_dir_all(&root.child("outputs"))?;
 
-        Ok(BuildCache { root, vfs, env })
+        Ok(BuildCache { root, env })
     }
 
     /// Try to retrieve previously built outputs of the given rule.
     /// Return Ok(true) if there was a cache hit and the retrieval succeeded.
     pub fn retrieve_outputs(&self, rule: &HexRule) -> Result<bool, io::Error> {
-        let rule_hash = BuildHash::hash(&self.vfs, &self.env, rule)?;
+        let rule_hash = BuildHash::hash(&self.env, rule, Path::new("."))?;
         let inputmap_path = self.root.child("inputmaps").child(&rule_hash);
-        if !self.vfs.is_file(&inputmap_path)? {
+
+        if !fs::exists(&inputmap_path)? {
             return Ok(false);
         }
 
-        let inputmap = String::from_utf8(self.vfs.read(&inputmap_path)?).unwrap();
+        let inputmap = String::from_utf8(fs::read(&inputmap_path)?).unwrap();
         let output_hashes: Vec<&str> = inputmap.split("\n").collect();
 
         for (output_path, output_hash) in rule.outputs.iter().zip(output_hashes.iter()) {
             let cached_path = self.root.child("outputs").child(output_hash);
-            self.vfs.remove_file(output_path)?;
-            self.vfs.copy(&cached_path, output_path)?;
+            fs::remove_file(output_path)?;
+            fs::copy(&cached_path, output_path)?;
         }
 
         Ok(true)
@@ -51,17 +50,17 @@ impl BuildCache {
         let mut inputmap = String::new();
         for output_path in rule.outputs.iter() {
             // Copy the output to the cached dir
-            let output_hash = BuildHash::hash_tree(&self.vfs, &output_path)?;
+            let output_hash = BuildHash::hash_tree(&output_path)?;
             let cached_path = self.root.child("outputs").child(&output_hash);
-            self.vfs.copy(output_path, &cached_path)?;
+            fs::copy(output_path, &cached_path)?;
 
             // Add it to the inputmap
             inputmap.push_str(&format!("{}\n", output_hash.0));
         }
 
-        let rule_hash = BuildHash::hash(&self.vfs, &self.env, rule)?;
+        let rule_hash = BuildHash::hash(&self.env, rule, Path::new("."))?;
         let inputmap_path = self.root.child("inputmaps").child(&rule_hash);
-        self.vfs.write(&inputmap_path, inputmap.as_bytes())?;
+        fs::write(&inputmap_path, inputmap.as_bytes())?;
 
         Ok(())
     }

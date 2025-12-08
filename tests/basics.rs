@@ -14,7 +14,7 @@ fn test_basics() {
         .arg("main")
         .assert()
         .success()
-        .stdout(is_match(".worker .. cc -o out/main out/lib.o out/main.o").unwrap());
+        .stdout(is_match(".worker .. Running: cc -o out/main out/lib.o out/main.o").unwrap());
 
     // Run main
     main_command()

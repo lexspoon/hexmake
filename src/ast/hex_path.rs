@@ -27,6 +27,15 @@ impl HexPath {
     pub fn child(&self, child_path: &str) -> HexPath {
         HexPath::from(format!("{}/{}", self.path, child_path))
     }
+
+    pub fn relative_to(&self, root: &HexPath) -> Result<HexPath, String> {
+        if self.path.starts_with(root.path.as_str()) {
+            return Ok(HexPath::from(&self.path[root.path.len()..]));
+        }
+        Err(format!(
+            "Could not find a relative path from {root} to {self}"
+        ))
+    }
 }
 
 impl From<&str> for HexPath {

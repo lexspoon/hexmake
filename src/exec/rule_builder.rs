@@ -35,7 +35,7 @@ fn build_rule_internal(
     let shell = env::var("SHELL").unwrap_or("sh".to_string());
 
     for command in &rule.commands {
-        println!("[worker {worker_id}] {}", command);
+        println!("[worker {worker_id}] Running: {}", command);
 
         let status = Command::new(&shell)
             .arg("-c")
