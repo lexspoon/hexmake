@@ -86,7 +86,12 @@ impl VirtualFileSystem for FakeFileSystem {
 
     fn read(&self, path: &HexPath) -> Result<Vec<u8>, io::Error> {
         let file = self.get_file(path)?;
-        Ok(file.lock().unwrap().contents.clone())
+        Ok(file.lock().unwrap().contents.to_bytes())
+    }
+
+    fn file_size(&self, path: &HexPath) -> Result<u64, io::Error> {
+        let file = self.get_file(path)?;
+        Ok(file.lock().unwrap().contents.size())
     }
 
     fn rename(&self, old_path: &HexPath, new_path: &HexPath) -> Result<(), io::Error> {
@@ -112,7 +117,7 @@ impl VirtualFileSystem for FakeFileSystem {
             .and_modify(|file| file.lock().unwrap().modtime = clock)
             .or_insert_with(|| {
                 Arc::new(Mutex::new(FakeFile {
-                    contents: Vec::new(),
+                    contents: FakeFileContent::default(),
                     modtime: clock,
                 }))
             });
@@ -129,7 +134,7 @@ impl VirtualFileSystem for FakeFileSystem {
         state.files.insert(
             path.clone(),
             Arc::new(Mutex::new(FakeFile {
-                contents: contents.to_vec(),
+                contents: FakeFileContent::Binary(contents.to_vec()),
                 modtime,
             })),
         );
@@ -176,6 +181,24 @@ impl FakeFileSystem {
             .cloned()
             .ok_or_else(|| file_not_found(path))
     }
+
+    /// Write a simulated large file (for testing without using lots of memory)
+    pub fn write_all_zeros(&self, path: &HexPath, size: u64) -> Result<(), io::Error> {
+        let mut state = self.state.lock().unwrap();
+
+        let modtime = state.clock;
+        state.files.insert(
+            path.clone(),
+            Arc::new(Mutex::new(FakeFile {
+                contents: FakeFileContent::AllZeros(size),
+                modtime,
+            })),
+        );
+
+        state.clock += 1;
+
+        Ok(())
+    }
 }
 
 /// Construct an IO error corresponding to a file not existing
@@ -183,10 +206,41 @@ fn file_not_found(path: &HexPath) -> io::Error {
     io::Error::new(io::ErrorKind::NotFound, format!("File not found: {}", path))
 }
 
+/// Content of a fake file - either actual bytes or simulated zero bytes
+#[derive(Clone)]
+enum FakeFileContent {
+    /// Actual binary content stored in memory
+    Binary(Vec<u8>),
+    /// Simulated file with all zeros (for testing large files efficiently)
+    AllZeros(u64),
+}
+
+impl Default for FakeFileContent {
+    fn default() -> Self {
+        FakeFileContent::Binary(Vec::new())
+    }
+}
+
+impl FakeFileContent {
+    fn size(&self) -> u64 {
+        match self {
+            FakeFileContent::Binary(vec) => vec.len() as u64,
+            FakeFileContent::AllZeros(size) => *size,
+        }
+    }
+
+    fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            FakeFileContent::Binary(vec) => vec.clone(),
+            FakeFileContent::AllZeros(size) => vec![0u8; *size as usize],
+        }
+    }
+}
+
 /// A file that lives in memory and can be used for testing.
 #[derive(Clone, Default)]
 struct FakeFile {
-    contents: Vec<u8>,
+    contents: FakeFileContent,
     #[allow(unused)]
     modtime: u64,
 }

@@ -42,6 +42,9 @@ pub fn conduct_build(plan: &BuildPlan, build_cache: &Arc<BuildCache>) -> Result<
         wait_for_task(&plan.tasks[rule_name], &task_finished);
     }
 
+    // Run garbage collection on the build cache if needed
+    build_cache.maybe_gc()?;
+
     Ok(())
 }
 

@@ -8,6 +8,7 @@ pub trait VirtualFileSystem: Send + Sync {
     fn copy(&self, source: &HexPath, destination: &HexPath) -> Result<(), io::Error>;
     fn create_dir_all(&self, path: &HexPath) -> Result<(), io::Error>;
     fn exists(&self, path: &HexPath) -> Result<bool, io::Error>;
+    fn file_size(&self, path: &HexPath) -> Result<u64, io::Error>;
     fn is_file(&self, path: &HexPath) -> Result<bool, io::Error>;
     fn list_dir(&self, path: &HexPath) -> Result<Vec<HexPath>, io::Error>;
     fn modtime(&self, path: &HexPath) -> Result<u64, io::Error>;

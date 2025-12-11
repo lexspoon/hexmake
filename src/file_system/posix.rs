@@ -21,6 +21,10 @@ impl VirtualFileSystem for PosixFileSystem {
         fs::create_dir_all(path)
     }
 
+    fn file_size(&self, path: &HexPath) -> Result<u64, io::Error> {
+        fs::metadata(path).map(|metadata| metadata.len())
+    }
+
     fn is_file(&self, path: &HexPath) -> Result<bool, io::Error> {
         if !fs::exists(path)? {
             return Ok(false);
