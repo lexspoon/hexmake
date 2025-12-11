@@ -1,15 +1,14 @@
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
+use std::io;
 use std::ops::Deref;
 use std::sync::Arc;
-use std::{fs, io};
 
 use ring::digest::{Context, Digest, SHA256};
 
 use crate::ast::hex_path::HexPath;
 use crate::ast::hexmake_file::HexRule;
-use ignore::Walk;
-use std::path::Path;
+use crate::file_system::vfs::VirtualFileSystem;
 
 /// A hash of a build rule and its inputs. This is the key
 /// for the build cache.
@@ -40,13 +39,13 @@ impl BuildHash {
     pub fn hash(
         env: &BTreeMap<Arc<String>, Arc<String>>,
         rule: &HexRule,
-        root: &Path,
+        vfs: &dyn VirtualFileSystem,
     ) -> Result<BuildHash, io::Error> {
         let mut context = Context::new(&SHA256);
 
         hash_rule(&mut context, rule);
         hash_env(&mut context, env);
-        hash_trees(&mut context, &rule.inputs, root)?;
+        hash_trees(&mut context, &rule.inputs, vfs)?;
 
         let digest = context.finish();
 
@@ -54,14 +53,15 @@ impl BuildHash {
     }
 
     /// Hash a file tree by itself
-    pub fn hash_tree(path: &&HexPath) -> Result<BuildHash, io::Error> {
+    pub fn hash_tree(path: &&HexPath, vfs: &dyn VirtualFileSystem) -> Result<BuildHash, io::Error> {
         let mut context = Context::new(&SHA256);
-        hash_tree(&mut context, path, &HexPath::from("."))?;
+        hash_tree(&mut context, path, vfs)?;
         let digest = context.finish();
         Ok(BuildHash(hex_string_for_digest(digest)))
     }
 }
 
+/// Convert the result of hashing into a hex string
 fn hex_string_for_digest(digest: Digest) -> String {
     let mut hex_digest = String::new();
     for b in digest.as_ref() {
@@ -122,11 +122,14 @@ fn hash_bytes(context: &mut Context, value: &[u8]) {
 }
 
 /// Hash a list of filesystem trees
-fn hash_trees(context: &mut Context, paths: &[HexPath], root: &Path) -> Result<(), io::Error> {
-    let root = HexPath::from(root.to_str().unwrap());
+fn hash_trees(
+    context: &mut Context,
+    paths: &[HexPath],
+    vfs: &dyn VirtualFileSystem,
+) -> Result<(), io::Error> {
     hash_usize(context, paths.len());
     for path in paths {
-        hash_tree(context, path, &root)?;
+        hash_tree(context, path, vfs)?;
     }
     Ok(())
 }
@@ -134,22 +137,21 @@ fn hash_trees(context: &mut Context, paths: &[HexPath], root: &Path) -> Result<(
 /// Hash a filesystem tree.
 /// This will handle both files and directory trees.
 /// It will return an error, though, if the tree doesn't exist at all.
-fn hash_tree(context: &mut Context, path: &HexPath, root: &HexPath) -> Result<(), io::Error> {
-    let rooted_path = root.child(path);
-    if !fs::exists(&rooted_path)? {
-        return Err(io::Error::other(format!("{rooted_path} does not exist")));
+fn hash_tree(
+    context: &mut Context,
+    path: &HexPath,
+    vfs: &dyn VirtualFileSystem,
+) -> Result<(), io::Error> {
+    if !vfs.exists(path)? {
+        return Err(io::Error::other(format!("{path} does not exist")));
     }
-    for entry in Walk::new(&rooted_path) {
-        let entry = entry.map_err(|e| io::Error::other(e.to_string()))?;
-        let entry_path = entry.path();
-        let entry_path = HexPath::from(entry_path.to_str().unwrap());
 
-        let relative_path: HexPath = entry_path.relative_to(root).map_err(io::Error::other)?;
-        hash_string(context, &relative_path);
-        if fs::metadata(&entry_path)?.is_file() {
+    for entry_path in vfs.tree_walk(path)? {
+        hash_string(context, &entry_path);
+        if vfs.is_file(&entry_path)? {
             // Use 0 to mean the path is a file
             hash_usize(context, 0);
-            let contents = fs::read(&entry_path)?;
+            let contents = vfs.read(&entry_path)?;
             hash_bytes(context, &contents);
         } else {
             // Use 1 for a directory
@@ -165,12 +167,11 @@ mod tests {
     use std::collections::BTreeSet;
 
     use super::*;
-    use tempfile::tempdir;
+    use crate::file_system::fake::FakeFileSystem;
 
     #[test]
     fn test_hash() {
-        let dir = tempdir().unwrap();
-        fs::create_dir(dir.path().join("out")).unwrap();
+        let vfs = Box::new(FakeFileSystem::default()) as Box<dyn VirtualFileSystem>;
 
         let mut test_hashes: Vec<BuildHash> = Vec::new();
 
@@ -184,34 +185,34 @@ mod tests {
         env.insert("ENV1".to_string().into(), "env1".to_string().into());
         env.insert("ENV2".to_string().into(), "env2".to_string().into());
 
-        fs::write(dir.path().join("test.txt"), b"test").unwrap();
-        fs::write(dir.path().join("out/test.txt"), b"test").unwrap();
+        vfs.write(&HexPath::from("test.txt"), b"test").unwrap();
+        vfs.write(&HexPath::from("out/test.txt"), b"test").unwrap();
 
         // Get a base hash to compare the others against
-        let base_hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+        let base_hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
         test_hashes.push(base_hash.clone());
 
-        // A hash should be a hex string
+        // A hash should be a hex string (this specific value depends on the VFS implementation)
         assert_eq!(
             &base_hash.0,
-            "0BEEC813A9FA2E5028D9F23D1DF7E8594D716EDC27B840EABCFD9CE06640CD1E"
+            "6EB9CD32A5CB18E0D77E012C8958F924B1DA9A441A19736EF623B6582C73FCA8"
         );
 
         // Hashing twice gives back the same value
-        let hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+        let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
         assert_eq!(hash, base_hash);
 
         // Changing an output file will not affect the hash
         {
-            fs::write(dir.path().join("out/test.txt"), b"test2").unwrap();
-            let hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+            vfs.write(&HexPath::from("out/test.txt"), b"test2").unwrap();
+            let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             assert_eq!(hash, base_hash);
         }
 
         // Changing an input file will affect the hash
         {
-            fs::write(dir.path().join("test.txt"), b"test2").unwrap();
-            let hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+            vfs.write(&HexPath::from("test.txt"), b"test2").unwrap();
+            let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             test_hashes.push(hash);
         }
 
@@ -219,7 +220,7 @@ mod tests {
         {
             let mut rule = rule.clone();
             rule.commands = vec!["/usr/bin/cp test.txt out/text.txt".into()];
-            let hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+            let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             test_hashes.push(hash);
         }
 
@@ -230,7 +231,7 @@ mod tests {
                 "ENV1".to_string().into(),
                 "different-env1".to_string().into(),
             );
-            let hash = BuildHash::hash(&env, &rule, dir.path()).unwrap();
+            let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             test_hashes.push(hash);
         }
 

@@ -2,6 +2,7 @@ mod ast;
 mod cache;
 mod error_exit;
 mod exec;
+mod file_system;
 mod graph;
 
 use std::collections::BTreeMap;
@@ -13,6 +14,7 @@ use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
+use crate::file_system::posix::PosixFileSystem;
 use crate::graph::planner::plan_build;
 
 fn main() {
@@ -28,7 +30,8 @@ fn main_internal() -> Result<(), io::Error> {
     let plan = plan_build(&hexmake_file, &targets);
     let env = get_environment(&hexmake_file);
 
-    let build_cache = Arc::new(BuildCache::new(env)?);
+    let vfs = Box::new(PosixFileSystem::default());
+    let build_cache = Arc::new(BuildCache::new(env, vfs)?);
 
     conduct_build(&plan, &build_cache)?;
 
