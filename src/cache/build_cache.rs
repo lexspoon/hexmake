@@ -13,6 +13,17 @@ pub struct BuildCache {
     env: Arc<BTreeMap<Arc<String>, Arc<String>>>,
 }
 
+/*
+ * A cache of previously built outputs. It has two kinds of files:
+ * 1. Inputmaps. The file `.hex/cache/inputmaps/ABCD` has an input map for
+ *    the build rule with the given hash. The file will contain a list of hashes,
+ *    one per line, of the outputs of the build rule, in the same order that the
+ *    outputs appear in the "outputs" field of the rule.
+ * 2. The output files themselves. The file `.hex/cache/outputs/ABCD` holds
+ *    a file whose hash is ABCD. It is possible fo the same output to be used
+ *    by multiple inputmaps; that means that Hexmake ran a build but determined
+ *    that it already had the output for that rule, after all.
+ */
 impl BuildCache {
     pub fn new(env: Arc<BTreeMap<Arc<String>, Arc<String>>>) -> Result<Self, io::Error> {
         let root = HexPath::from(".hex/cache");

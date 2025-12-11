@@ -57,7 +57,6 @@ impl Task {
 
     /// Inform this task that one of its dependencies finished building.
     /// Return the remaining number of dependencies that still need to be built.
-    #[allow(dead_code)]
     pub fn dependency_finished(&mut self) -> usize {
         assert!(self.unbuilt_dependencies > 0);
         let new_count = self.unbuilt_dependencies - 1;

@@ -17,13 +17,11 @@ impl HexPath {
         HexPath { path }
     }
 
-    #[allow(dead_code)]
     pub fn is_output(&self) -> bool {
         self.path.starts_with("out/")
     }
 
     /// Generate a path by appending a child path
-    #[allow(dead_code)]
     pub fn child(&self, child_path: &str) -> HexPath {
         HexPath::from(format!("{}/{}", self.path, child_path))
     }
