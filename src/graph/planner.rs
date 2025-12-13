@@ -13,6 +13,7 @@ pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Arc<String>>) -> BuildPl
 }
 
 pub struct BuildPlan {
+    #[allow(unused)]
     pub target_rules: BTreeSet<RuleName>,
     pub tasks: BTreeMap<RuleName, Arc<Mutex<Task>>>,
 }

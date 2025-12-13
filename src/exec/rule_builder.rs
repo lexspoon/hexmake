@@ -1,24 +1,12 @@
-use std::env;
-use std::process::{Command, exit};
+use std::process::Command;
+use std::{env, io};
 
 use crate::ast::hexmake_file::HexRule;
 use crate::exec::work_dir::WorkDirManager;
 
 /// Build the given rule right now. Assume that all of its
 /// dependencies have been built and are available in `out`.
-/// Exit if the build command fails.
-pub fn build_rule(worker_id: u32, rule: &HexRule, work_dir: &WorkDirManager) {
-    if let Err(error) = build_rule_internal(worker_id, rule, work_dir) {
-        println!("{}", error);
-        exit(2);
-    }
-}
-
-fn build_rule_internal(
-    worker_id: u32,
-    rule: &HexRule,
-    work_dir: &WorkDirManager,
-) -> std::io::Result<()> {
+pub fn build_rule(worker_id: u32, rule: &HexRule, work_dir: &WorkDirManager) -> io::Result<()> {
     // Clean the work directory for this build
     work_dir.clean()?;
 
@@ -45,7 +33,7 @@ fn build_rule_internal(
 
         if !status.success() {
             // Leave the work directory intact for inspection on failure
-            exit(1);
+            return Err(io::Error::other(format!("Command failed: {command}")));
         }
     }
 

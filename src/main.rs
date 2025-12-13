@@ -33,9 +33,7 @@ fn main_internal() -> Result<(), io::Error> {
     let vfs = Box::new(PosixFileSystem::default());
     let build_cache = Arc::new(BuildCache::new(env, vfs)?);
 
-    conduct_build(&plan, &build_cache)?;
-
-    Ok(())
+    conduct_build(&plan, &build_cache)
 }
 
 /// Parse the command line arguments
