@@ -9,7 +9,7 @@ mod graph;
 use std::collections::BTreeMap;
 use std::fs::read_to_string;
 use std::sync::Arc;
-use std::{env, io};
+use std::env;
 
 use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
@@ -29,7 +29,7 @@ fn main_internal() -> Result<(), Error> {
     let hexmake_file = load_hexmake_file();
     let targets = parse_arguments();
 
-    let plan = plan_build(&hexmake_file, &targets);
+    let plan = plan_build(&hexmake_file, &targets)?;
     let env = get_environment(&hexmake_file);
 
     let vfs = Box::new(PosixFileSystem::default());

@@ -8,7 +8,7 @@ use crate::graph::task::Task;
 /// Make a plan for building the given targets.
 /// The targets can be either the names of outputs or
 /// the names of rules.
-pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Arc<String>>) -> BuildPlan {
+pub fn plan_build(hex_file: &HexmakeFile, targets: &Vec<Arc<String>>) -> Result<BuildPlan, String> {
     Planner::new(hex_file).plan(targets)
 }
 
@@ -47,26 +47,29 @@ impl Planner {
         }
     }
 
-    fn plan(mut self, targets: &Vec<Arc<String>>) -> BuildPlan {
+    fn plan(mut self, targets: &Vec<Arc<String>>) -> Result<BuildPlan, String> {
         for target in targets {
-            let target_rule_name = self.plan_one_target(target);
+            let target_rule_name = self.plan_one_target(target)?;
             self.target_rules.insert(target_rule_name);
         }
 
-        BuildPlan {
+       Ok( BuildPlan {
             target_rules: self.target_rules,
             tasks: self.task_for_rule,
-        }
+        })
     }
 
     /// Plan the build for one target, updating the fields of the
     /// planner as it goes. Return the rule name for building the
     /// one requested target.
-    fn plan_one_target(&mut self, target: &Arc<String>) -> RuleName {
+    fn plan_one_target(&mut self, target: &Arc<String>) -> Result<RuleName, String> {
         let target_as_path = HexPath::from(target);
         let rule_name = if target_as_path.is_output() {
             // It's an output. Find the rule that goes with it.
-            self.rule_by_output[&target_as_path].clone()
+            match self.rule_by_output.get(&target_as_path) {
+                Some(rule_name) => rule_name.clone(),
+                None => return Err(format!("No rule exists to build `{target}`")),
+            }
         } else {
             // If it's not an output, it must be a rule name
             RuleName::from(target)
@@ -75,17 +78,20 @@ impl Planner {
         if self.task_for_rule.contains_key(&rule_name) {
             // There's already a task for this rule. There's nothing
             // more to do.
-            return rule_name;
+            return Ok(rule_name);
         }
 
         // Make a new task
-        let rule = self.rule_map[&rule_name].clone();
+        let rule = match self.rule_map.get(&rule_name) {
+            Some(rule) => rule.clone(),
+            None => return Err(format!("No rule exists named `{rule_name}`")),
+        };
         let task = Arc::new(Mutex::new(Task::new(rule.clone())));
 
         // Add subtasks for inputs
         for input in &rule.inputs {
             if input.is_output() {
-                let input_rule_name = self.plan_one_target(&input.path);
+                let input_rule_name = self.plan_one_target(&input.path)?;
                 let sub_task = &self.task_for_rule[&input_rule_name];
                 Task::add_dependency(&task, sub_task);
             }
@@ -93,7 +99,7 @@ impl Planner {
 
         self.task_for_rule.insert(rule_name.clone(), task);
 
-        rule_name
+        Ok(rule_name)
     }
 }
 
@@ -250,8 +256,48 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_no_such_output() {
+        let hexmake_file = foo_bar_hexmake_file();
+
+        let build_plan = plan_build(
+            &hexmake_file,
+            &vec!["out/bogus".to_string().into()],
+        );
+
+        assert_eq!(
+            build_plan_summary(&build_plan),
+            "No rule exists to build `out/bogus`"
+        );
+
+        check_build_plan(&build_plan)
+    }
+
+    #[test]
+    fn test_no_such_rule() {
+        let hexmake_file = foo_bar_hexmake_file();
+
+        let build_plan = plan_build(
+            &hexmake_file,
+            &vec!["bogus".to_string().into()],
+        );
+
+        assert_eq!(
+            build_plan_summary(&build_plan),
+            "No rule exists named `bogus`"
+        );
+
+        check_build_plan(&build_plan)
+    }
+
+
     /// Generate a string summary of a build plan for testing
-    fn build_plan_summary(build_plan: &BuildPlan) -> String {
+    fn build_plan_summary(build_plan: &Result<BuildPlan, String>) -> String {
+        let build_plan = match build_plan {
+            Ok(build_plan) => build_plan,
+            Err(error) => return error.clone(),
+        };
+
         let mut result = String::new();
         for task in build_plan.tasks.values() {
             let task = task.lock().unwrap();
@@ -279,7 +325,12 @@ mod tests {
 
     /// Internal consistency checks for a build plan
     #[track_caller]
-    fn check_build_plan(build_plan: &BuildPlan) {
+    fn check_build_plan(build_plan: &Result<BuildPlan, String>) {
+        let build_plan = match build_plan {
+            Ok(build_plan) => build_plan,
+            Err(_error) => return,
+        };
+
         for task in build_plan.tasks.values() {
             let rule_name = { task.lock().unwrap().rule_name() };
 
