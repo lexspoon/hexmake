@@ -1,38 +1,29 @@
 Hexmake
 =======
 
-Hexmake is Make but with some learnings from over the years:
+Hexmake is a small build tool that provides good caching behavior
+and then gets out of the way. It is organized like Make, but
+with a variety of small improvements:
 
-* Treat whole directory trees as inputs, not just
-  individual files.
-* Treat the command line and certain environment
-  variables as inputs. Rebuild if they change.
-* Separate the build outputs into a separate directory
-  tree from the source code.
-* Use your own favorite scripting language for templating,
-  rather than having a crappy scripting language
-  build into the tool.
+* Process whole directory trees as inputs, not just individual files.
+* Support .gitignore when doing so.
+* When deciding whether to rebuild, use the contents of the files
+  rather than their timestamps.
+* Also include the command line and environment variables as inputs.
+* Always put build outputs into an `out` directory rather than
+  ever putting them back in the source trees.
+* Use your favorite scripting language for templating
+  rather the tool having its own.
 
-Compared to Nix:
+Compared to Nix, which is otherwise a masterpiece:
 
-* Don't do things like recompile Firefox so that
-  your build is the same as someone else's. It's better
-  to let a developer set up their tools the way they like
-  and then to have each tool trust the other ones to do
-  what it is supposed to do.
+* Do not recompile Firefox from source code. Use the system libraries and tools
+  the way they already exist on the system rather than control them with the
+  build tool. The idea is that a developer gets a better experience when their
+  different tools all integrate with each other. Bringing that idea to the build
+  system, it is preferable if the build system uses the same compilers and other
+  tools that the developer is already using, and likewise, it is better if the
+  outputs of the build system are ready to be used by the developer and do not
+  need some special side environment to be run.
 
-
-I hope you enjoy! Tell me about your experiments if you try
-it out.
-
-Some background reading about all of this:
-
-* [Recursive Make Considered Harmful](
-    https://aegis.sourceforge.net/auug97.pdf),
-  by Peter Miller.
-  This kicked off my thinking about what you want in
-  a build system.
-* [Recursive Maven Consided Harmful](
-      https://blog.lexspoon.org/2012/12/recursive-maven-considered-harmful.html),
-  by Lex Spoon.
-  This is my break down of the issue, a decade later.
+I hope you enjoy Hexmake! Tell me about your experiments if you try it out.

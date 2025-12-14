@@ -210,8 +210,8 @@ type HexmakeFile = {
 
 type Rule = {
   name: RuleName
-  inputs: Artifact[]
   outputs: OutputArtifact[]
+  inputs: Artifact[]
   commands: string
 }
 
@@ -295,81 +295,3 @@ required that the source tree refers to an actual file
 or directory tree in the original inputs. However, it
 is permitted for a source tree to not exist if the
 associated build rule never runs.
-
-## Comparisons to other tools
-
-Here is why I build Hexmake after trying everything else that is out there.
-
-* Bazel is inspiring, but it is hard to use in practice without
-  having something like the Google build team to support you. What
-  makes it so hard is the way that you extend and configure it
-  with Starlark modules. They are provided off the shelf and hard
-  to modify for your own use. They often do 100 things you don't need
-  and yet not quite what you need for your own environment. Based on
-  that experiment, I think it's better for people to write their own
-  script around the build tool and simply check the script into
-  their repository. I find with Bazel that many problems would be simple
-  if I could edit the script file but that it's impractical to do so
-  given how everything is stitched together.
-* Nix is also inspiring. It is an artifact-based build tool that
-  is minimal and gets out of the way.
-  * It does not give you a good way to name a top-level list of artifacts
-    and have them all depend on each other. I think it is interesting
-    that a "build tool" has a list of "build artifacts" it manages,
-    each with a simple top-level name.
-  * It has an extensive scripting language that is still not competitive
-    with Ruby or Python for practical usage. I already thought it was
-    a questionable direction to design a custom scripting language
-  * It is minimal in the wrong ways. A build still has a notion of
-    targets.
-  * It encourages a style of building dependencies internally rather
-    than using system dependencies. For things like `gcc` or `firefox`,
-    it seems much better to me to have the developer manage them and
-    then to invoke them via the PATH. This approach matches the general
-    idea that a developer will install their dependencies and then,
-    far from wanting their tools to be isolated from each other, to
-    rely on each other for their individual jobs. When a developer
-    install a tool at `/usr/bin/gcc`, or elsewhere on their PATH,
-    then that is the version of `gcc` that they want all C compilation
-    in their experience to use.
-* Mill is very effective for a standard Scala project, but I found it
-  challenging with Mill to just write random rules for non-Scala build
-  steps that are not built in. In general, I often what a build tool
-  that isn't specific to one language but rather---like Make---lets
-  me declare my dependencies and give a command line for building
-  each artifact.
-
-
-## Background reading
-
-[Artifact-Based Build Systems][artifact-based]. This page from the Bazel
-documentation explains the general idea of an artifact-based build tool.
-
-[Recursive Make Considered Harmful][recursive-make]. This article from Peter
-Miller reviews how Make works and how to get the best results from it. The
-sandboxing in Hexmake is designed to steer users away from the traps that Miller
-identified.
-
-[Lambda: The Ultimate Little Language][ultimate-little-language], by my
-advisor Olin Shivers. Olin argues that when you want a little language for something, then
-you should reuse the general-purpose parts of an existing language rather
-than reinvent things like variables and function calls; these are more subtle
-than they look and are often implemented badly when bolted onto a file format.
-For this reason, Hexmake does not have its own subroutines or variables.
-You should use a scripting language like Python, generate a `Hexmake` file,
-and then run `hexmake`.
-
-[Nix Reference Manual][nix-reference]. The introduction includes a rationale and
-explanation of how Nix works. Nix is carefully designed and built, and there is
-a lot of practical experience with it at this point.
-
-[The Mill Build Tool][mill]. The web page for Mill has many helpful design notes
-about how it works and why.
-
-[artifact-based]: https://bazel.build/basics/artifact-based-builds
-[lex-spoon]: https://lexspoon.org
-[mill]: https://mill-build.org/mill/index.html
-[nix-reference]: https://nix.dev/manual/nix/2.28/
-[relax-json]: https://github.com/eteeselink/relax-json
-[recursive-make]: https://aegis.sourceforge.net/auug97.pdf
-[ultimate-little-language]: https://3e8.org/pub/scheme/doc/Universal%20Scripting%20Framework%20(Lambda%20as%20little%20language).pdf
