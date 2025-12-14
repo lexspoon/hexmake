@@ -39,7 +39,7 @@ impl VirtualFileSystem for PosixFileSystem {
 
         for entry in read_dir {
             let file_name = entry?.path().to_string_lossy().to_string();
-            result.push(path.child(&file_name));
+            result.push(path.child(&file_name).unwrap());
         }
 
         result.sort();
@@ -90,7 +90,7 @@ impl VirtualFileSystem for PosixFileSystem {
         for entry in Walk::new(path) {
             let entry = entry.map_err(|e| io::Error::other(e.to_string()))?;
             let entry_path = entry.path();
-            result.push(HexPath::from(entry_path.to_str().unwrap()));
+            result.push(HexPath::try_from(entry_path.to_str().unwrap()).unwrap());
         }
         Ok(result)
     }

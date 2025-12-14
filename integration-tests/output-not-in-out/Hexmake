@@ -1,0 +1,17 @@
+{
+    "rules": [
+        {
+            "name": "lib.o",
+            "inputs": [
+                "lib.c",
+                "lib.h"
+            ],
+            "outputs": [
+                "lib.o"
+            ],
+            "commands": [
+                "cc -o lib.o -c lib.c"
+            ]
+        }
+    ]
+}

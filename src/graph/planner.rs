@@ -49,11 +49,11 @@ impl Planner {
 
     fn plan(mut self, targets: &Vec<Arc<String>>) -> Result<BuildPlan, String> {
         for target in targets {
-            let target_rule_name = self.plan_one_target(target)?;
+            let target_rule_name = self.plan_one_target(target, &BTreeSet::new())?;
             self.target_rules.insert(target_rule_name);
         }
 
-       Ok( BuildPlan {
+        Ok(BuildPlan {
             target_rules: self.target_rules,
             tasks: self.task_for_rule,
         })
@@ -62,8 +62,12 @@ impl Planner {
     /// Plan the build for one target, updating the fields of the
     /// planner as it goes. Return the rule name for building the
     /// one requested target.
-    fn plan_one_target(&mut self, target: &Arc<String>) -> Result<RuleName, String> {
-        let target_as_path = HexPath::from(target);
+    fn plan_one_target(
+        &mut self,
+        target: &Arc<String>,
+        targets_in_progress: &BTreeSet<RuleName>,
+    ) -> Result<RuleName, String> {
+        let target_as_path = HexPath::try_from(target.as_str()).unwrap();
         let rule_name = if target_as_path.is_output() {
             // It's an output. Find the rule that goes with it.
             match self.rule_by_output.get(&target_as_path) {
@@ -74,6 +78,12 @@ impl Planner {
             // If it's not an output, it must be a rule name
             RuleName::from(target)
         };
+
+        if targets_in_progress.contains(&rule_name) {
+            return Err(format!("Rule cycle involving rule `{rule_name}`"));
+        }
+        let mut targets_in_progress = targets_in_progress.clone();
+        targets_in_progress.insert(rule_name.clone());
 
         if self.task_for_rule.contains_key(&rule_name) {
             // There's already a task for this rule. There's nothing
@@ -91,7 +101,7 @@ impl Planner {
         // Add subtasks for inputs
         for input in &rule.inputs {
             if input.is_output() {
-                let input_rule_name = self.plan_one_target(&input.path)?;
+                let input_rule_name = self.plan_one_target(&input.path, &targets_in_progress)?;
                 let sub_task = &self.task_for_rule[&input_rule_name];
                 Task::add_dependency(&task, sub_task);
             }
@@ -189,14 +199,20 @@ mod tests {
             rules: vec![
                 HexRule {
                     name: "foo".into(),
-                    outputs: vec!["out/foo".into()],
-                    inputs: vec!["out/foo.c".into(), "out/bar.c".into()],
+                    outputs: vec![HexPath::try_from("out/foo").unwrap()],
+                    inputs: vec![
+                        HexPath::try_from("out/foo.c").unwrap(),
+                        HexPath::try_from("out/bar.c").unwrap(),
+                    ],
                     commands: vec!["gcc -o out/foo out/foo.c out/bar.c".into()],
                 }
                 .into(),
                 HexRule {
                     name: "gensources".into(),
-                    outputs: vec!["out/foo.c".into(), "out/bar.c".into()],
+                    outputs: vec![
+                        HexPath::try_from("out/foo.c").unwrap(),
+                        HexPath::try_from("out/bar.c").unwrap(),
+                    ],
                     inputs: vec![],
                     commands: vec!["scripts/gensources".into()],
                 }
@@ -219,51 +235,11 @@ mod tests {
         check_build_plan(&build_plan);
     }
 
-    /// A Hexmake file that compiles two C files into two binaries
-    fn foo_bar_hexmake_file() -> HexmakeFile {
-        HexmakeFile {
-            environ: vec![],
-            rules: vec![
-                HexRule {
-                    name: "foo".into(),
-                    outputs: vec!["out/foo".into()],
-                    inputs: vec!["out/foo.o".into()],
-                    commands: vec!["gcc -o out/foo out/foo.o".into()],
-                }
-                .into(),
-                HexRule {
-                    name: "foo.o".into(),
-                    outputs: vec!["out/foo.o".into()],
-                    inputs: vec!["foo.c".into()],
-                    commands: vec!["gcc -o out/foo.o out/foo.c".into()],
-                }
-                .into(),
-                HexRule {
-                    name: "bar".into(),
-                    outputs: vec!["out/bar".into()],
-                    inputs: vec!["out/bar.o".into()],
-                    commands: vec!["gcc -o out/bar out/bar.o".into()],
-                }
-                .into(),
-                HexRule {
-                    name: "bar.o".into(),
-                    outputs: vec!["out/bar.o".into()],
-                    inputs: vec!["bar.c".into()],
-                    commands: vec!["gcc -o out/bar.o out/bar.c".into()],
-                }
-                .into(),
-            ],
-        }
-    }
-
     #[test]
     fn test_no_such_output() {
         let hexmake_file = foo_bar_hexmake_file();
 
-        let build_plan = plan_build(
-            &hexmake_file,
-            &vec!["out/bogus".to_string().into()],
-        );
+        let build_plan = plan_build(&hexmake_file, &vec!["out/bogus".to_string().into()]);
 
         assert_eq!(
             build_plan_summary(&build_plan),
@@ -277,10 +253,7 @@ mod tests {
     fn test_no_such_rule() {
         let hexmake_file = foo_bar_hexmake_file();
 
-        let build_plan = plan_build(
-            &hexmake_file,
-            &vec!["bogus".to_string().into()],
-        );
+        let build_plan = plan_build(&hexmake_file, &vec!["bogus".to_string().into()]);
 
         assert_eq!(
             build_plan_summary(&build_plan),
@@ -290,6 +263,72 @@ mod tests {
         check_build_plan(&build_plan)
     }
 
+    #[test]
+    fn test_cycle() {
+        let hexmake_file = HexmakeFile {
+            environ: vec![],
+            rules: vec![
+                HexRule {
+                    name: "foo".into(),
+                    outputs: vec![HexPath::try_from("out/foo").unwrap()],
+                    inputs: vec![HexPath::try_from("out/bar").unwrap()],
+                    commands: vec!["echo foo".into()],
+                }
+                .into(),
+                HexRule {
+                    name: "bar".into(),
+                    outputs: vec![HexPath::try_from("out/bar").unwrap()],
+                    inputs: vec![HexPath::try_from("out/foo").unwrap()],
+                    commands: vec!["echo bar".into()],
+                }
+                .into(),
+            ],
+        };
+
+        let build_plan = plan_build(&hexmake_file, &vec!["foo".to_string().into()]);
+
+        assert_eq!(
+            build_plan_summary(&build_plan),
+            "Rule cycle involving rule `foo`"
+        );
+    }
+
+    /// A Hexmake file that compiles two C files into two binaries
+    fn foo_bar_hexmake_file() -> HexmakeFile {
+        HexmakeFile {
+            environ: vec![],
+            rules: vec![
+                HexRule {
+                    name: "foo".into(),
+                    outputs: vec![HexPath::try_from("out/foo").unwrap()],
+                    inputs: vec![HexPath::try_from("out/foo.o").unwrap()],
+                    commands: vec!["gcc -o out/foo out/foo.o".into()],
+                }
+                .into(),
+                HexRule {
+                    name: "foo.o".into(),
+                    outputs: vec![HexPath::try_from("out/foo.o").unwrap()],
+                    inputs: vec![HexPath::try_from("foo.c").unwrap()],
+                    commands: vec!["gcc -o out/foo.o out/foo.c".into()],
+                }
+                .into(),
+                HexRule {
+                    name: "bar".into(),
+                    outputs: vec![HexPath::try_from("out/bar").unwrap()],
+                    inputs: vec![HexPath::try_from("out/bar.o").unwrap()],
+                    commands: vec!["gcc -o out/bar out/bar.o".into()],
+                }
+                .into(),
+                HexRule {
+                    name: "bar.o".into(),
+                    outputs: vec![HexPath::try_from("out/bar.o").unwrap()],
+                    inputs: vec![HexPath::try_from("bar.c").unwrap()],
+                    commands: vec!["gcc -o out/bar.o out/bar.c".into()],
+                }
+                .into(),
+            ],
+        }
+    }
 
     /// Generate a string summary of a build plan for testing
     fn build_plan_summary(build_plan: &Result<BuildPlan, String>) -> String {

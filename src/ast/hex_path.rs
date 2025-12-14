@@ -7,13 +7,13 @@ use serde::Deserialize;
 
 /// A path that can be built and/or used as source code.
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd)]
-#[serde(transparent)]
+#[serde(try_from = "String")]
 pub struct HexPath {
     pub path: Arc<String>,
 }
 
 impl HexPath {
-    pub fn new(path: Arc<String>) -> HexPath {
+    fn new(path: Arc<String>) -> HexPath {
         HexPath { path }
     }
 
@@ -22,41 +22,62 @@ impl HexPath {
     }
 
     /// Generate a path by appending a child path
-    pub fn child(&self, child_path: &str) -> HexPath {
-        HexPath::from(format!("{}/{}", self.path, child_path))
+    pub fn child(&self, child_path: &str) -> Result<HexPath, String> {
+        HexPath::try_from(format!("{}/{}", self.path, child_path))
     }
+}
 
-    pub fn relative_to(&self, root: &HexPath) -> Result<HexPath, String> {
-        if self.path.starts_with(root.path.as_str()) {
-            return Ok(HexPath::from(&self.path[root.path.len()..]));
+impl TryFrom<&str> for HexPath {
+    type Error = String;
+
+    fn try_from(path: &str) -> Result<HexPath, String> {
+        // TODO(lex) test cases for these
+        if path.is_empty() {
+            return Err("Empty path".to_string());
         }
-        Err(format!(
-            "Could not find a relative path from {root} to {self}"
-        ))
+        if path.starts_with("/") {
+            return Err(format!("Path `{path}` starts with a slash"));
+        }
+        if path.ends_with("/") {
+            return Err(format!("Path `{path}` ends with a slash"));
+        }
+        if path.contains("//") {
+            return Err(format!("Path `{path}` contains a double slash"));
+        }
+        for part in path.split("/") {
+            if part == "." {
+                return Err(format!("Path `{path}` contains `.` as a component"));
+            }
+            if part == ".." {
+                return Err(format!("Path `{path}` contains `..` as a component"));
+            }
+        }
+
+        Ok(HexPath::new(Arc::new(path.to_string())))
     }
 }
 
-impl From<&str> for HexPath {
-    fn from(path: &str) -> Self {
-        HexPath::new(Arc::new(path.to_string()))
+impl TryFrom<String> for HexPath {
+    type Error = String;
+
+    fn try_from(path: String) -> Result<HexPath, String> {
+        HexPath::try_from(path.as_str())
     }
 }
 
-impl From<String> for HexPath {
-    fn from(path: String) -> Self {
-        HexPath::new(Arc::new(path))
+impl TryFrom<&String> for HexPath {
+    type Error = String;
+
+    fn try_from(path: &String) -> Result<HexPath, String> {
+        HexPath::try_from(path.as_str())
     }
 }
 
-impl From<&String> for HexPath {
-    fn from(path: &String) -> Self {
-        HexPath::new(Arc::new(path.to_string()))
-    }
-}
+impl TryFrom<&Arc<String>> for HexPath {
+    type Error = String;
 
-impl From<&Arc<String>> for HexPath {
-    fn from(path: &Arc<String>) -> Self {
-        HexPath::new(path.clone())
+    fn try_from(path: &Arc<String>) -> Result<HexPath, String> {
+        HexPath::try_from(path.as_str())
     }
 }
 
@@ -86,10 +107,50 @@ mod tests {
 
     #[test]
     fn test_identify_output_paths() {
-        assert!(HexPath::from("out/foo.o").is_output());
+        assert!(HexPath::try_from("out/foo.o").unwrap().is_output());
 
-        assert!(!HexPath::from("foo.c").is_output());
-        assert!(!HexPath::from("src/foo.c").is_output());
-        assert!(!HexPath::from("output.c").is_output());
+        assert!(!HexPath::try_from("foo.c").unwrap().is_output());
+        assert!(!HexPath::try_from("src/foo.c").unwrap().is_output());
+        assert!(!HexPath::try_from("output.c").unwrap().is_output());
+    }
+
+    #[test]
+    fn test_try_from() {
+        // Valid paths
+        assert_eq!(
+            HexPath::try_from("foo"),
+            Ok(HexPath::new(Arc::new("foo".to_string())))
+        );
+        assert_eq!(
+            HexPath::try_from("foo/bar"),
+            Ok(HexPath::new(Arc::new("foo/bar".to_string())))
+        );
+        assert_eq!(
+            HexPath::try_from("foo/.bar"),
+            Ok(HexPath::new(Arc::new("foo/.bar".to_string())))
+        );
+
+        // Invalid paths
+        assert_eq!(HexPath::try_from("").unwrap_err(), "Empty path");
+        assert_eq!(
+            HexPath::try_from("/foo").unwrap_err(),
+            "Path `/foo` starts with a slash"
+        );
+        assert_eq!(
+            HexPath::try_from("foo/").unwrap_err(),
+            "Path `foo/` ends with a slash"
+        );
+        assert_eq!(
+            HexPath::try_from("foo//bar").unwrap_err(),
+            "Path `foo//bar` contains a double slash"
+        );
+        assert_eq!(
+            HexPath::try_from("foo/./bar").unwrap_err(),
+            "Path `foo/./bar` contains `.` as a component"
+        );
+        assert_eq!(
+            HexPath::try_from("foo/../bar").unwrap_err(),
+            "Path `foo/../bar` contains `..` as a component"
+        );
     }
 }

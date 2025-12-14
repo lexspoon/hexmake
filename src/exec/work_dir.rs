@@ -233,9 +233,9 @@ mod tests {
 
             // Copy inputs
             let inputs = vec![
-                HexPath::from(&simple_file),
-                HexPath::from(&nested_file),
-                HexPath::from(&nested_subdir2),
+                HexPath::try_from(simple_file.as_str()).unwrap(),
+                HexPath::try_from(nested_file.as_str()).unwrap(),
+                HexPath::try_from(nested_subdir2.as_str()).unwrap(),
             ];
             work_dir.copy_inputs(&inputs).unwrap();
 
@@ -270,8 +270,8 @@ mod tests {
 
             // Prepare output directories
             let outputs = vec![
-                HexPath::from("out/lib.o"),
-                HexPath::from("out/subdir/main.o"),
+                HexPath::try_from("out/lib.o").unwrap(),
+                HexPath::try_from("out/subdir/main.o").unwrap(),
             ];
             work_dir.prepare_output_directories(&outputs).unwrap();
 
@@ -299,7 +299,7 @@ mod tests {
                 .unwrap();
 
             // Copy outputs back to workspace
-            let outputs = vec![HexPath::from("out/result.txt")];
+            let outputs = vec![HexPath::try_from("out/result.txt").unwrap()];
             work_dir.copy_outputs(&outputs).unwrap();
 
             // Verify file was copied to correct location

@@ -177,16 +177,16 @@ mod tests {
 
         // Set up a test rule, test environment, and test filesystem
         let mut rule = HexRule::new("test".into());
-        rule.outputs = vec!["out/test.txt".into()];
-        rule.inputs = vec!["test.txt".into()];
+        rule.outputs = vec![HexPath::try_from("out/test.txt").unwrap()];
+        rule.inputs = vec![HexPath::try_from("test.txt").unwrap()];
         rule.commands = vec!["cp test.txt out/text.txt".into()];
 
         let mut env: BTreeMap<Arc<String>, Arc<String>> = BTreeMap::new();
         env.insert("ENV1".to_string().into(), "env1".to_string().into());
         env.insert("ENV2".to_string().into(), "env2".to_string().into());
 
-        vfs.write(&HexPath::from("test.txt"), b"test").unwrap();
-        vfs.write(&HexPath::from("out/test.txt"), b"test").unwrap();
+        vfs.write(&HexPath::try_from("test.txt").unwrap(), b"test").unwrap();
+        vfs.write(&HexPath::try_from("out/test.txt").unwrap(), b"test").unwrap();
 
         // Get a base hash to compare the others against
         let base_hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
@@ -204,14 +204,14 @@ mod tests {
 
         // Changing an output file will not affect the hash
         {
-            vfs.write(&HexPath::from("out/test.txt"), b"test2").unwrap();
+            vfs.write(&HexPath::try_from("out/test.txt").unwrap(), b"test2").unwrap();
             let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             assert_eq!(hash, base_hash);
         }
 
         // Changing an input file will affect the hash
         {
-            vfs.write(&HexPath::from("test.txt"), b"test2").unwrap();
+            vfs.write(&HexPath::try_from("test.txt").unwrap(), b"test2").unwrap();
             let hash = BuildHash::hash(&env, &rule, &*vfs).unwrap();
             test_hashes.push(hash);
         }

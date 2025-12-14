@@ -1,5 +1,6 @@
 mod ast;
 mod cache;
+mod check;
 mod error;
 mod error_exit;
 mod exec;
@@ -7,12 +8,13 @@ mod file_system;
 mod graph;
 
 use std::collections::BTreeMap;
+use std::env;
 use std::fs::read_to_string;
 use std::sync::Arc;
-use std::env;
 
 use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
+use crate::check::file::check_file;
 use crate::error::Error;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
@@ -26,8 +28,9 @@ fn main() {
 }
 
 fn main_internal() -> Result<(), Error> {
-    let hexmake_file = load_hexmake_file();
     let targets = parse_arguments();
+    let hexmake_file = load_hexmake_file();
+    check_file(&hexmake_file)?;
 
     let plan = plan_build(&hexmake_file, &targets)?;
     let env = get_environment(&hexmake_file);

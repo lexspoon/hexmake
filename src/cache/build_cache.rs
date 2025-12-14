@@ -30,10 +30,10 @@ impl BuildCache {
         env: Arc<BTreeMap<Arc<String>, Arc<String>>>,
         vfs: Box<dyn VirtualFileSystem>,
     ) -> Result<Self, io::Error> {
-        let root = HexPath::from(".hex/cache");
+        let root = HexPath::try_from(".hex/cache").unwrap();
 
-        vfs.create_dir_all(&root.child("inputmaps"))?;
-        vfs.create_dir_all(&root.child("outputs"))?;
+        vfs.create_dir_all(&root.child("inputmaps").unwrap())?;
+        vfs.create_dir_all(&root.child("outputs").unwrap())?;
 
         Ok(BuildCache { root, env, vfs })
     }
@@ -42,7 +42,7 @@ impl BuildCache {
     /// Return Ok(true) if there was a cache hit and the retrieval succeeded.
     pub fn retrieve_outputs(&self, rule: &HexRule) -> Result<bool, io::Error> {
         let rule_hash = BuildHash::hash(&self.env, rule, &*self.vfs)?;
-        let inputmap_path = self.root.child("inputmaps").child(&rule_hash);
+        let inputmap_path = self.root.child("inputmaps").unwrap().child(&rule_hash).unwrap();
 
         if !self.vfs.exists(&inputmap_path)? {
             return Ok(false);
@@ -52,7 +52,7 @@ impl BuildCache {
         let output_hashes: Vec<&str> = inputmap.split("\n").collect();
 
         for (output_path, output_hash) in rule.outputs.iter().zip(output_hashes.iter()) {
-            let cached_path = self.root.child("outputs").child(output_hash);
+            let cached_path = self.root.child("outputs").unwrap().child(output_hash).unwrap();
             self.vfs.remove_file(output_path)?;
             self.vfs.copy(&cached_path, output_path)?;
         }
@@ -66,7 +66,7 @@ impl BuildCache {
         for output_path in rule.outputs.iter() {
             // Copy the output to the cached dir
             let output_hash = BuildHash::hash_tree(&output_path, self.vfs.as_ref())?;
-            let cached_path = self.root.child("outputs").child(&output_hash);
+            let cached_path = self.root.child("outputs").unwrap().child(&output_hash).unwrap();
             self.vfs.copy(output_path, &cached_path)?;
 
             // Add it to the inputmap
@@ -74,7 +74,7 @@ impl BuildCache {
         }
 
         let rule_hash = BuildHash::hash(&self.env, rule, self.vfs.as_ref())?;
-        let inputmap_path = self.root.child("inputmaps").child(&rule_hash);
+        let inputmap_path = self.root.child("inputmaps").unwrap().child(&rule_hash).unwrap();
         self.vfs.write(&inputmap_path, inputmap.as_bytes())?;
 
         Ok(())
@@ -85,7 +85,7 @@ impl BuildCache {
         const MAX_SIZE: u64 = 200 * 1024 * 1024; // 200 MB
         const TARGET_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
 
-        let outputs_dir = self.root.child("outputs");
+        let outputs_dir = self.root.child("outputs").unwrap();
 
         // Scan all output files and compute their total size
         let mut output_files: Vec<(HexPath, u64, u64)> = Vec::new(); // (path, size, modtime)
@@ -133,7 +133,7 @@ impl BuildCache {
         &self,
         existing_outputs: &BTreeSet<HexPath>,
     ) -> Result<BTreeSet<HexPath>, io::Error> {
-        let inputmaps_dir = self.root.child("inputmaps");
+        let inputmaps_dir = self.root.child("inputmaps").unwrap();
         let mut referenced_outputs = BTreeSet::new();
 
         for inputmap_path in self.vfs.list_dir(&inputmaps_dir)? {
@@ -152,7 +152,7 @@ impl BuildCache {
                 if output_hash.is_empty() {
                     continue;
                 }
-                let output_path = self.root.child("outputs").child(output_hash);
+                let output_path = self.root.child("outputs").unwrap().child(output_hash).unwrap();
                 this_inputmap_outputs.push(output_path.clone());
 
                 if !existing_outputs.contains(&output_path) {
@@ -208,13 +208,13 @@ mod tests {
 
         // Create some small files (total well under 200 MB)
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/file1"), 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/file1").unwrap(), 1024 * 1024)
             .unwrap(); // 1 MB
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/file2"), 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/file2").unwrap(), 1024 * 1024)
             .unwrap(); // 1 MB
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/file3"), 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/file3").unwrap(), 1024 * 1024)
             .unwrap(); // 1 MB
 
         // GC should do nothing
@@ -224,19 +224,19 @@ mod tests {
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/file1"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/file1").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/file2"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/file2").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/file3"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/file3").unwrap())
                 .unwrap()
         );
     }
@@ -253,18 +253,18 @@ mod tests {
         // Create files totaling over 200 MB (will trigger GC)
         // These will have different modification times due to the fake clock
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/old1"), 80 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/old1").unwrap(), 80 * 1024 * 1024)
             .unwrap(); // 80 MB, oldest
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/old2"), 80 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/old2").unwrap(), 80 * 1024 * 1024)
             .unwrap(); // 80 MB
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/new1"), 80 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/new1").unwrap(), 80 * 1024 * 1024)
             .unwrap(); // 80 MB, newest
 
         // Create an inputmap that references new1 so it's not orphaned
         fake_vfs
-            .write(&HexPath::from(".hex/cache/inputmaps/map1"), b"new1\n")
+            .write(&HexPath::try_from(".hex/cache/inputmaps/map1").unwrap(), b"new1\n")
             .unwrap();
 
         // Total is 240 MB, over the 200 MB limit
@@ -275,19 +275,19 @@ mod tests {
         assert!(
             !cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/old1"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/old1").unwrap())
                 .unwrap()
         );
         assert!(
             !cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/old2"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/old2").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/new1"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/new1").unwrap())
                 .unwrap()
         );
     }
@@ -303,21 +303,21 @@ mod tests {
 
         // Create output files
         fake_vfs
-            .write(&HexPath::from(".hex/cache/outputs/output1"), b"data")
+            .write(&HexPath::try_from(".hex/cache/outputs/output1").unwrap(), b"data")
             .unwrap();
         fake_vfs
-            .write(&HexPath::from(".hex/cache/outputs/output2"), b"data")
+            .write(&HexPath::try_from(".hex/cache/outputs/output2").unwrap(), b"data")
             .unwrap();
 
         // Create inputmaps - one referencing existing outputs, one referencing missing output
         fake_vfs
-            .write(&HexPath::from(".hex/cache/inputmaps/map1"), b"output1\n")
+            .write(&HexPath::try_from(".hex/cache/inputmaps/map1").unwrap(), b"output1\n")
             .unwrap();
         fake_vfs
-            .write(&HexPath::from(".hex/cache/inputmaps/map2"), b"output2\n")
+            .write(&HexPath::try_from(".hex/cache/inputmaps/map2").unwrap(), b"output2\n")
             .unwrap();
         fake_vfs
-            .write(&HexPath::from(".hex/cache/inputmaps/orphan"), b"missing\n")
+            .write(&HexPath::try_from(".hex/cache/inputmaps/orphan").unwrap(), b"missing\n")
             .unwrap();
 
         // Run GC - won't do anything because we're under the limit (no pruning)
@@ -327,19 +327,19 @@ mod tests {
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/map1"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/map1").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/map2"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/map2").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/orphan"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/orphan").unwrap())
                 .unwrap()
         );
     }
@@ -355,19 +355,19 @@ mod tests {
 
         // Create large output files to trigger GC (over 200 MB total)
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/out1"), 150 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/out1").unwrap(), 150 * 1024 * 1024)
             .unwrap();
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/out2"), 60 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/out2").unwrap(), 60 * 1024 * 1024)
             .unwrap();
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/out3"), 10 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/out3").unwrap(), 10 * 1024 * 1024)
             .unwrap();
 
         // Create inputmap with multiple outputs, one of which is missing
         fake_vfs
             .write(
-                &HexPath::from(".hex/cache/inputmaps/multi"),
+                &HexPath::try_from(".hex/cache/inputmaps/multi").unwrap(),
                 b"out1\nout2\nmissing\n",
             )
             .unwrap();
@@ -376,7 +376,7 @@ mod tests {
         // (out2 and out3 will survive because only out1 needs to be deleted to get under 100MB)
         fake_vfs
             .write(
-                &HexPath::from(".hex/cache/inputmaps/valid"),
+                &HexPath::try_from(".hex/cache/inputmaps/valid").unwrap(),
                 b"out2\nout3\n",
             )
             .unwrap();
@@ -389,7 +389,7 @@ mod tests {
         assert!(
             !cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/multi"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/multi").unwrap())
                 .unwrap()
         );
 
@@ -397,7 +397,7 @@ mod tests {
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/valid"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/valid").unwrap())
                 .unwrap()
         );
     }
@@ -413,17 +413,17 @@ mod tests {
 
         // Create output files that total over 200 MB to trigger GC
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/old"), 150 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/old").unwrap(), 150 * 1024 * 1024)
             .unwrap();
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/ref1"), 30 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/ref1").unwrap(), 30 * 1024 * 1024)
             .unwrap();
         fake_vfs
-            .write_all_zeros(&HexPath::from(".hex/cache/outputs/ref2"), 30 * 1024 * 1024)
+            .write_all_zeros(&HexPath::try_from(".hex/cache/outputs/ref2").unwrap(), 30 * 1024 * 1024)
             .unwrap();
         fake_vfs
             .write_all_zeros(
-                &HexPath::from(".hex/cache/outputs/orphan"),
+                &HexPath::try_from(".hex/cache/outputs/orphan").unwrap(),
                 20 * 1024 * 1024,
             )
             .unwrap();
@@ -431,7 +431,7 @@ mod tests {
         // Create an inputmap that only references ref1 and ref2
         // Note: "orphan" is not referenced by any inputmap, so it's an unreferenced output
         fake_vfs
-            .write(&HexPath::from(".hex/cache/inputmaps/map1"), b"ref1\nref2\n")
+            .write(&HexPath::try_from(".hex/cache/inputmaps/map1").unwrap(), b"ref1\nref2\n")
             .unwrap();
 
         // Total is 230 MB, will trigger GC
@@ -443,7 +443,7 @@ mod tests {
         assert!(
             !cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/old"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/old").unwrap())
                 .unwrap()
         );
 
@@ -451,13 +451,13 @@ mod tests {
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/ref1"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/ref1").unwrap())
                 .unwrap()
         );
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/ref2"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/ref2").unwrap())
                 .unwrap()
         );
 
@@ -465,7 +465,7 @@ mod tests {
         assert!(
             !cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/outputs/orphan"))
+                .exists(&HexPath::try_from(".hex/cache/outputs/orphan").unwrap())
                 .unwrap()
         );
 
@@ -473,7 +473,7 @@ mod tests {
         assert!(
             cache
                 .vfs
-                .exists(&HexPath::from(".hex/cache/inputmaps/map1"))
+                .exists(&HexPath::try_from(".hex/cache/inputmaps/map1").unwrap())
                 .unwrap()
         );
     }

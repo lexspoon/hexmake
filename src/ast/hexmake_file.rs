@@ -137,27 +137,65 @@ mod tests {
                 rules: vec![
                     HexRule {
                         name: "out/lib.o".to_string().into(),
-                        outputs: vec![HexPath::from("out/lib.o")],
-                        inputs: vec![HexPath::from("lib.c"), HexPath::from("lib.h")],
+                        outputs: vec![HexPath::try_from("out/lib.o").unwrap()],
+                        inputs: vec![
+                            HexPath::try_from("lib.c").unwrap(),
+                            HexPath::try_from("lib.h").unwrap()
+                        ],
                         commands: vec!["gcc -o out/lib.o -c lib.c".to_string()]
                     }
                     .into(),
                     HexRule {
                         name: "out/main.o".to_string().into(),
-                        outputs: vec![HexPath::from("out/main.o")],
-                        inputs: vec![HexPath::from("lib.h"), HexPath::from("main.c")],
+                        outputs: vec![HexPath::try_from("out/main.o").unwrap()],
+                        inputs: vec![
+                            HexPath::try_from("lib.h").unwrap(),
+                            HexPath::try_from("main.c").unwrap()
+                        ],
                         commands: vec!["gcc -o out/main.o -c main.c".to_string()]
                     }
                     .into(),
                     HexRule {
                         name: "out/main".to_string().into(),
-                        outputs: vec![HexPath::from("out/main")],
-                        inputs: vec![HexPath::from("out/lib.o"), HexPath::from("out/main.o")],
+                        outputs: vec![HexPath::try_from("out/main").unwrap()],
+                        inputs: vec![
+                            HexPath::try_from("out/lib.o").unwrap(),
+                            HexPath::try_from("out/main.o").unwrap()
+                        ],
                         commands: vec!["gcc -o out/main out/lib.o out/main.o".to_string()]
                     }
                     .into()
                 ]
             }
+        );
+    }
+
+    #[test]
+    fn test_bad_path() {
+        let input = indoc! {r###"
+            {
+                "rules": [
+                  {
+                    "name": "out/lib.o",
+                    "outputs": [
+                      "/out/lib.o"
+                    ],
+                    "inputs": [
+                      "lib.c",
+                      "lib.h"
+                    ],
+                    "commands": [
+                      "gcc -o out/lib.o -c lib.c"
+                    ]
+                  }
+                ]
+            }"###
+        };
+
+        let result: serde_json::Result<HexmakeFile> = serde_json::from_str(input);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "Path `/out/lib.o` starts with a slash at line 7 column 9"
         );
     }
 }
