@@ -1,5 +1,6 @@
 mod ast;
 mod cache;
+mod error;
 mod error_exit;
 mod exec;
 mod file_system;
@@ -12,6 +13,7 @@ use std::{env, io};
 
 use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
+use crate::error::Error;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
 use crate::file_system::posix::PosixFileSystem;
@@ -23,7 +25,7 @@ fn main() {
     }
 }
 
-fn main_internal() -> Result<(), io::Error> {
+fn main_internal() -> Result<(), Error> {
     let hexmake_file = load_hexmake_file();
     let targets = parse_arguments();
 
@@ -33,7 +35,7 @@ fn main_internal() -> Result<(), io::Error> {
     let vfs = Box::new(PosixFileSystem::default());
     let build_cache = Arc::new(BuildCache::new(env, vfs)?);
 
-    conduct_build(&plan, &build_cache)
+    Ok(conduct_build(&plan, &build_cache)?)
 }
 
 /// Parse the command line arguments
