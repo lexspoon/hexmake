@@ -17,13 +17,9 @@ with a variety of small improvements:
 
 Compared to Nix, which is otherwise a masterpiece:
 
-* Do not recompile Firefox from source code. Use the system libraries and tools
-  the way they already exist on the system rather than control them with the
-  build tool. The idea is that a developer gets a better experience when their
-  different tools all integrate with each other. Bringing that idea to the build
-  system, it is preferable if the build system uses the same compilers and other
-  tools that the developer is already using, and likewise, it is better if the
-  outputs of the build system are ready to be used by the developer and do not
-  need some special side environment to be run.
+* Use the system libraries and tools the way they already exist on the system
+  rather than control them with the build tool. If your build depends on
+  Firefox for running tests, then Hexmake will use the same Firefox that
+  you are manually invoking as a developer.
 
 I hope you enjoy Hexmake! Tell me about your experiments if you try it out.
