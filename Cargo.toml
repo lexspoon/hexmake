@@ -1,8 +1,8 @@
 [package]
 name = "hexmake"
-version = "1.0.1"
+version = "1.0.2"
 license = "MIT-0"
-description = "Make-like build tool with many small improvements"
+description = "Run a multi-step build with caching"
 homepage = "https://github.com/lexspoon/hexmake"
 repository = "https://github.com/lexspoon/hexmake"
 edition = "2024"
@@ -11,6 +11,7 @@ edition = "2024"
 name = "hexmake"
 
 [dependencies]
+clap = { version = "4.5.53", features = ["derive"] }
 crossbeam-channel = "0.5.15"
 ignore = "0.4.25"
 itertools = "0.14.0"

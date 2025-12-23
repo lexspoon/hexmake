@@ -36,8 +36,7 @@
         "out/main"
       ],
       "commands": [
-        "cc -o out/main out/lib.o out/main.o",
-        "chmod 755 out/main"
+        "cc -o out/main out/lib.o out/main.o"
       ]
     }
   ]

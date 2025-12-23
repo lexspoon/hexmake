@@ -31,7 +31,6 @@ impl TryFrom<&str> for HexPath {
     type Error = String;
 
     fn try_from(path: &str) -> Result<HexPath, String> {
-        // TODO(lex) test cases for these
         if path.is_empty() {
             return Err("Empty path".to_string());
         }

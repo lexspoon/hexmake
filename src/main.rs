@@ -1,3 +1,4 @@
+mod args;
 mod ast;
 mod cache;
 mod check;
@@ -7,11 +8,14 @@ mod exec;
 mod file_system;
 mod graph;
 
+use clap::Parser;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs::read_to_string;
+use std::process::exit;
 use std::sync::Arc;
 
+use crate::args::Args;
 use crate::ast::hexmake_file::HexmakeFile;
 use crate::cache::build_cache::BuildCache;
 use crate::check::file::check_file;
@@ -28,32 +32,21 @@ fn main() {
 }
 
 fn main_internal() -> Result<(), Error> {
-    let targets = parse_arguments();
-    let hexmake_file = load_hexmake_file();
+    let args: Args = Args::parse();
+    let hexmake_file: HexmakeFile = load_hexmake_file();
     check_file(&hexmake_file)?;
 
-    let plan = plan_build(&hexmake_file, &targets)?;
+    if args.list_targets {
+        list_targets(&hexmake_file);
+    }
+
+    let plan = plan_build(&hexmake_file, &args.targets)?;
     let env = get_environment(&hexmake_file);
 
     let vfs = Box::new(PosixFileSystem::default());
     let build_cache = Arc::new(BuildCache::new(env, vfs)?);
 
     Ok(conduct_build(&plan, &build_cache)?)
-}
-
-/// Parse the command line arguments
-fn parse_arguments() -> Vec<Arc<String>> {
-    let result: Vec<Arc<String>> = env::args().skip(1).map(Arc::new).collect();
-
-    if result.is_empty() {
-        usage_exit();
-    }
-
-    result
-}
-
-fn usage_exit() -> ! {
-    error_exit!("Usage: hexmake target...\nAt least one target must be supplied.");
 }
 
 /// Load and parse the Hexmake file
@@ -70,6 +63,23 @@ fn load_hexmake_file() -> HexmakeFile {
         Err(error) => error_exit!("Could not parse Hexmake file: {}", error),
     };
     hexmake_file
+}
+
+/// List available targets and then exit
+fn list_targets(hexmake_file: &HexmakeFile) -> ! {
+    let mut targets: Vec<String> = Vec::new();
+    for rule in &hexmake_file.rules {
+        targets.push(rule.name.to_string());
+        for output in &rule.outputs {
+            targets.push(output.to_string());
+        }
+    }
+    targets.sort();
+    for target in targets {
+        println!("{}", target);
+    }
+
+    exit(0)
 }
 
 /// Make a map of the environment variables that should be passed through
