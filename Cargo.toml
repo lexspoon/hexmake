@@ -1,11 +1,10 @@
 [package]
 name = "hexmake"
-version = "1.0.0"
+version = "1.0.1"
 license = "MIT-0"
 description = "Make-like build tool with many small improvements"
 homepage = "https://github.com/lexspoon/hexmake"
 repository = "https://github.com/lexspoon/hexmake"
-
 edition = "2024"
 
 [[bin]]

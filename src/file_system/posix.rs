@@ -5,7 +5,7 @@ use std::{
 };
 
 use crate::{ast::hex_path::HexPath, file_system::vfs::VirtualFileSystem};
-use ignore::Walk;
+use ignore::WalkBuilder;
 
 /// The underlying Posix filesystem
 #[derive(Default)]
@@ -87,11 +87,12 @@ impl VirtualFileSystem for PosixFileSystem {
 
     fn tree_walk(&self, path: &HexPath) -> Result<Vec<HexPath>, io::Error> {
         let mut result = Vec::new();
-        for entry in Walk::new(path) {
+        for entry in WalkBuilder::new(path).hidden(false).build() {
             let entry = entry.map_err(|e| io::Error::other(e.to_string()))?;
             let entry_path = entry.path();
             result.push(HexPath::try_from(entry_path.to_str().unwrap()).unwrap());
         }
+        result.sort();
         Ok(result)
     }
 

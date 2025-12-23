@@ -3,7 +3,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::ast::hex_path::HexPath;
-use ignore::Walk;
+use ignore::WalkBuilder;
 
 /// A utility for managing a worker's isolated work directory. Commands are run
 /// in a side directory so that if an input file is not listed in the Hexmake
@@ -48,12 +48,12 @@ impl WorkDirManager {
     pub fn copy_inputs(&self, inputs: &[HexPath]) -> io::Result<()> {
         for input in inputs {
             let src = Path::new(input.as_ref());
-            let dst = Path::new(&self.root_dir).join(input.as_ref());
 
             if src.is_file() {
+                let dst = Path::new(&self.root_dir).join(input.as_ref());
                 copy_one_file(src, dst)?;
             } else if src.is_dir() {
-                for entry in Walk::new(src) {
+                for entry in WalkBuilder::new(src).hidden(false).build() {
                     let entry = entry.map_err(io::Error::other)?;
                     let entry_path = entry.path();
 
@@ -62,11 +62,7 @@ impl WorkDirManager {
                         continue;
                     }
 
-                    // Calculate relative path from the source directory
-                    let relative_path = entry_path.strip_prefix(src).map_err(io::Error::other)?;
-
-                    // Construct destination path preserving the input's base path
-                    let dst = dst.join(relative_path);
+                    let dst = Path::new(&self.root_dir).join(entry_path);
 
                     if entry_path.is_dir() {
                         // Create the directory
