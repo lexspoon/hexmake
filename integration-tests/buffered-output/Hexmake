@@ -1,0 +1,37 @@
+{
+  "rules": [
+    {
+      "name": "rule1",
+      "inputs": [],
+      "outputs": [
+        "out/rule1.txt"
+      ],
+      "commands": [
+        "sleep 0.05; echo rule1-line1; echo rule1-line2; echo rule1-line3",
+        "touch out/rule1.txt"
+      ]
+    },
+    {
+      "name": "rule2",
+      "inputs": [],
+      "outputs": [
+        "out/rule2.txt"
+      ],
+      "commands": [
+        "sleep 0.10; echo rule2-line1; echo rule2-line2; echo rule2-line3",
+        "touch out/rule2.txt"
+      ]
+    },
+    {
+      "name": "rule3",
+      "inputs": [],
+      "outputs": [
+        "out/rule3.txt"
+      ],
+      "commands": [
+        "sleep 0.15; echo rule3-line1; echo rule3-line2; echo rule3-line3",
+        "touch out/rule3.txt"
+      ]
+    }
+  ]
+}

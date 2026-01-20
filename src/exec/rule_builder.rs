@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::{env, io};
 
 use crate::ast::hexmake_file::HexRule;
@@ -25,13 +25,30 @@ pub fn build_rule(worker_id: u32, rule: &HexRule, work_dir: &WorkDirManager) -> 
     for command in &rule.commands {
         println!("[worker {worker_id}] Running: {}", command);
 
-        let status = Command::new(&shell)
+        // Spawn the command and buffer its output
+        let output = Command::new(&shell)
             .arg("-c")
             .arg(command)
             .current_dir(work_dir.root())
-            .status()?;
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()?;
 
-        if !status.success() {
+        // Print all buffered output
+        for line in str::from_utf8(&output.stderr)
+            .map_err(|_| io::Error::other("Bad UTF-8"))?
+            .lines()
+        {
+            println!("[worker {worker_id}] {}", line);
+        }
+        for line in str::from_utf8(&output.stdout)
+            .map_err(|_| io::Error::other("Bad UTF-8"))?
+            .lines()
+        {
+            println!("[worker {worker_id}] {}", line);
+        }
+
+        if !output.status.success() {
             // Leave the work directory intact for inspection on failure
             return Err(io::Error::other(format!("Command failed: {command}")));
         }
