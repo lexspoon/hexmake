@@ -2,11 +2,17 @@ use std::process::{Command, Stdio};
 use std::{env, io};
 
 use crate::ast::hexmake_file::HexRule;
+use crate::exec::command_logger::CommandLogger;
 use crate::exec::work_dir::WorkDirManager;
 
 /// Build the given rule right now. Assume that all of its
 /// dependencies have been built and are available in `out`.
-pub fn build_rule(worker_id: u32, rule: &HexRule, work_dir: &WorkDirManager) -> io::Result<()> {
+pub fn build_rule(
+    worker_id: u32,
+    rule: &HexRule,
+    work_dir: &WorkDirManager,
+    command_logger: &CommandLogger,
+) -> io::Result<()> {
     // Clean the work directory for this build
     work_dir.clean()?;
 
@@ -34,19 +40,8 @@ pub fn build_rule(worker_id: u32, rule: &HexRule, work_dir: &WorkDirManager) -> 
             .stderr(Stdio::piped())
             .output()?;
 
-        // Print all buffered output
-        for line in str::from_utf8(&output.stderr)
-            .map_err(|_| io::Error::other("Bad UTF-8"))?
-            .lines()
-        {
-            println!("[worker {worker_id}] {}", line);
-        }
-        for line in str::from_utf8(&output.stdout)
-            .map_err(|_| io::Error::other("Bad UTF-8"))?
-            .lines()
-        {
-            println!("[worker {worker_id}] {}", line);
-        }
+        // Print output
+        command_logger.log_output(&output, worker_id)?;
 
         if !output.status.success() {
             // Leave the work directory intact for inspection on failure

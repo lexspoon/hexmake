@@ -3,6 +3,7 @@ use std::thread::spawn;
 use std::{fs, io};
 
 use crate::cache::build_cache::BuildCache;
+use crate::exec::command_logger::CommandLogger;
 use crate::exec::rule_builder::build_rule;
 use crate::exec::work_dir::WorkDirManager;
 use crate::exec::work_list::WorkList;
@@ -11,6 +12,8 @@ use crate::graph::task::Task;
 
 /// Run a build plan to completion.
 pub fn conduct_build(plan: &BuildPlan, build_cache: &Arc<BuildCache>) -> Result<(), io::Error> {
+    let command_logger = CommandLogger::default();
+
     fs::create_dir_all("out")?;
 
     let work_list = Arc::new(Mutex::new(WorkList::default()));
@@ -31,7 +34,16 @@ pub fn conduct_build(plan: &BuildPlan, build_cache: &Arc<BuildCache>) -> Result<
         let work_list = work_list.clone();
         let work_list_condvar = work_list_condvar.clone();
         let build_cache = build_cache.clone();
-        spawn(move || run_worker(i, work_list, work_list_condvar, build_cache));
+        let command_logger = command_logger.clone();
+        spawn(move || {
+            run_worker(
+                i,
+                work_list,
+                work_list_condvar,
+                build_cache,
+                &command_logger,
+            )
+        });
     }
 
     wait_for_workers(work_list, work_list_condvar)?;
@@ -47,6 +59,7 @@ fn run_worker(
     work_list: Arc<Mutex<WorkList>>,
     work_list_condvar: Arc<Condvar>,
     build_cache: Arc<BuildCache>,
+    command_logger: &CommandLogger,
 ) {
     let work_dir = WorkDirManager::new(worker_id);
 
@@ -58,7 +71,13 @@ fn run_worker(
         };
         let mut task = task.lock().unwrap();
 
-        let build_result = check_cache_or_build_now(worker_id, &mut task, &build_cache, &work_dir);
+        let build_result = check_cache_or_build_now(
+            worker_id,
+            &mut task,
+            &build_cache,
+            &work_dir,
+            command_logger,
+        );
 
         // Remove from running tasks
         let mut work_list = work_list.lock().unwrap();
@@ -94,6 +113,7 @@ fn check_cache_or_build_now(
     task: &mut Task,
     build_cache: &Arc<BuildCache>,
     work_dir: &WorkDirManager,
+    command_logger: &CommandLogger,
 ) -> Result<(), io::Error> {
     if build_cache.retrieve_outputs(&task.rule)? {
         println!(
@@ -101,7 +121,7 @@ fn check_cache_or_build_now(
             task.rule.name
         );
     } else {
-        build_rule(worker_id, &task.rule, work_dir)?;
+        build_rule(worker_id, &task.rule, work_dir, command_logger)?;
         build_cache.insert_outputs(&task.rule)?;
     }
 
