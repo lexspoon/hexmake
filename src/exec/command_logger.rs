@@ -1,3 +1,4 @@
+use crate::ast::hexmake_file::RuleName;
 use std::cell::RefCell;
 use std::io;
 use std::process::Output;
@@ -18,14 +19,14 @@ struct CommandLoggerState {
 impl CommandLogger {
     /// Log the output that results from the given command. Suppress
     /// output from successful commands if there have been any non-successful commands.
-    pub fn log_output(&self, output: &Output, worker_id: u32) -> Result<(), io::Error> {
+    pub fn log_output(&self, output: &Output, rule_name: &RuleName) -> Result<(), io::Error> {
         let state = self.state.lock().unwrap();
-        state.borrow_mut().log_output(output, worker_id)
+        state.borrow_mut().log_output(output, rule_name)
     }
 }
 
 impl CommandLoggerState {
-    pub fn log_output(&mut self, output: &Output, worker_id: u32) -> Result<(), io::Error> {
+    pub fn log_output(&mut self, output: &Output, rule_name: &RuleName) -> Result<(), io::Error> {
         // Update the cumulative error status
         self.error_occurred |= !output.status.success();
 
@@ -37,14 +38,14 @@ impl CommandLoggerState {
                 .map_err(|_| io::Error::other("Bad UTF-8"))?
                 .lines()
             {
-                println!("[worker {worker_id}] {}", line);
+                println!("[{rule_name}] {}", line);
             }
 
             for line in str::from_utf8(&output.stdout)
                 .map_err(|_| io::Error::other("Bad UTF-8"))?
                 .lines()
             {
-                println!("[worker {worker_id}] {}", line);
+                println!("[{rule_name}] {}", line);
             }
         }
 

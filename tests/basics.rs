@@ -14,7 +14,7 @@ fn test_basics() {
         .arg("main")
         .assert()
         .success()
-        .stdout(is_match(".worker .. Running: cc -o out/main out/lib.o out/main.o").unwrap());
+        .stdout(is_match(".main. Running: cc -o out/main out/lib.o out/main.o").unwrap());
 
     // Run main
     main_command()
@@ -31,7 +31,7 @@ fn test_basics() {
         .arg("main")
         .assert()
         .success()
-        .stdout(is_match(".worker .. Retrieved outputs of main from cache").unwrap());
+        .stdout(is_match(".main. Retrieved outputs from cache").unwrap());
 
     // Run it again
     main_command()

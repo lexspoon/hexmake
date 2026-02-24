@@ -71,13 +71,8 @@ fn run_worker(
         };
         let mut task = task.lock().unwrap();
 
-        let build_result = check_cache_or_build_now(
-            worker_id,
-            &mut task,
-            &build_cache,
-            &work_dir,
-            command_logger,
-        );
+        let build_result =
+            check_cache_or_build_now(&mut task, &build_cache, &work_dir, command_logger);
 
         // Remove from running tasks
         let mut work_list = work_list.lock().unwrap();
@@ -85,7 +80,7 @@ fn run_worker(
 
         // Shut down if an error happened
         if let Err(error) = build_result {
-            println!("[worker {worker_id}] {error}");
+            println!("[{}] {error}", &task.rule_name());
 
             work_list.error_occurred = true;
             work_list.pending_tasks.clear();
@@ -109,19 +104,15 @@ fn run_worker(
 }
 
 fn check_cache_or_build_now(
-    worker_id: u32,
     task: &mut Task,
     build_cache: &Arc<BuildCache>,
     work_dir: &WorkDirManager,
     command_logger: &CommandLogger,
 ) -> Result<(), io::Error> {
     if build_cache.retrieve_outputs(&task.rule)? {
-        println!(
-            "[worker {worker_id}] Retrieved outputs of {} from cache",
-            task.rule.name
-        );
+        println!("[{}] Retrieved outputs from cache", task.rule.name);
     } else {
-        build_rule(worker_id, &task.rule, work_dir, command_logger)?;
+        build_rule(&task.rule, work_dir, command_logger)?;
         build_cache.insert_outputs(&task.rule)?;
     }
 

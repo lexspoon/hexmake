@@ -26,32 +26,28 @@ fn test_buffered_output_no_interleaving() {
     // The output for each command should be grouped up. For example,
     // rule1-line1 through rule1-line3 should be together in the output.
     let stdout = String::from_utf8(output.stdout.clone()).unwrap();
-    let stdout = Regex::new("worker .")
+    let stdout = Regex::new(".rule.. Running: sleep.*")
         .unwrap()
-        .replace_all(&stdout, "worker .")
-        .to_string();
-    let stdout = Regex::new("Running: sleep.*")
-        .unwrap()
-        .replace_all(&stdout, "Running: sleep ...")
+        .replace_all(&stdout, "[ruleN] Running: sleep ...")
         .to_string();
     assert_eq!(
         stdout,
         indoc! {r"
-                [worker .] Running: sleep ...
-                [worker .] Running: sleep ...
-                [worker .] Running: sleep ...
-                [worker .] rule1-line1
-                [worker .] rule1-line2
-                [worker .] rule1-line3
-                [worker .] Running: touch out/rule1.txt
-                [worker .] rule2-line1
-                [worker .] rule2-line2
-                [worker .] rule2-line3
-                [worker .] Running: touch out/rule2.txt
-                [worker .] rule3-line1
-                [worker .] rule3-line2
-                [worker .] rule3-line3
-                [worker .] Running: touch out/rule3.txt
+                [ruleN] Running: sleep ...
+                [ruleN] Running: sleep ...
+                [ruleN] Running: sleep ...
+                [rule1] rule1-line1
+                [rule1] rule1-line2
+                [rule1] rule1-line3
+                [rule1] Running: touch out/rule1.txt
+                [rule2] rule2-line1
+                [rule2] rule2-line2
+                [rule2] rule2-line3
+                [rule2] Running: touch out/rule2.txt
+                [rule3] rule3-line1
+                [rule3] rule3-line2
+                [rule3] rule3-line3
+                [rule3] Running: touch out/rule3.txt
         "},
     );
 

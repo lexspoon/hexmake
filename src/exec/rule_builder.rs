@@ -8,11 +8,12 @@ use crate::exec::work_dir::WorkDirManager;
 /// Build the given rule right now. Assume that all of its
 /// dependencies have been built and are available in `out`.
 pub fn build_rule(
-    worker_id: u32,
     rule: &HexRule,
     work_dir: &WorkDirManager,
     command_logger: &CommandLogger,
 ) -> io::Result<()> {
+    let rule_name = &rule.name;
+
     // Clean the work directory for this build
     work_dir.clean()?;
 
@@ -29,7 +30,7 @@ pub fn build_rule(
     let shell = env::var("SHELL").unwrap_or("sh".to_string());
 
     for command in &rule.commands {
-        println!("[worker {worker_id}] Running: {}", command);
+        println!("[{rule_name}] Running: {}", command);
 
         // Spawn the command and buffer its output
         let output = Command::new(&shell)
@@ -41,7 +42,7 @@ pub fn build_rule(
             .output()?;
 
         // Print output
-        command_logger.log_output(&output, worker_id)?;
+        command_logger.log_output(&output, rule_name)?;
 
         if !output.status.success() {
             // Leave the work directory intact for inspection on failure
