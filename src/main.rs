@@ -7,6 +7,7 @@ mod error_exit;
 mod exec;
 mod file_system;
 mod graph;
+mod lock;
 
 use clap::Parser;
 use std::collections::BTreeMap;
@@ -22,6 +23,7 @@ use crate::check::file::check_file;
 use crate::error::Error;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
+use crate::lock::try_lock;
 use crate::file_system::posix::PosixFileSystem;
 use crate::graph::planner::plan_build;
 
@@ -40,6 +42,7 @@ fn main_internal() -> Result<(), Error> {
         list_targets(&hexmake_file);
     }
 
+    let _hex_lock = try_lock()?;
     let plan = plan_build(&hexmake_file, &args.targets)?;
     let env = get_environment(&hexmake_file);
 

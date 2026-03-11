@@ -1,0 +1,15 @@
+{
+  "rules": [
+    {
+      "name": "main",
+      "inputs": [],
+      "outputs": [
+        "out/main.txt"
+      ],
+      "commands": [
+        "sleep 2",
+        "touch out/main.txt"
+      ]
+    }
+  ]
+}
