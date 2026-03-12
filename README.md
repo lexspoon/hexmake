@@ -1,21 +1,22 @@
 Hexmake runs a multi-step build using caching. You give it a file describing all
 the possible build steps along with their inputs and outputs. The tool will then
-chain them together to produce an output, use cached results from prior builds
+chain them together to produce an output, using cached results from prior builds
 when possible.
 
-The tool does not handle other steps of a build and is designed to fit into the
-build ecosystem you already have. You are in the sweet spot for this tool if
-either of these is true:
+That's all the tool does, so you need to set up a larger build system around
+it. It just gives you some functionality that is difficult to accomplish
+using basic Unix tools on their own.
+
+You are in the sweet spot for Hexmake if one of these is true:
 
 * You started out using shell scripts for running builds and tests, but your
   project has become complicated enough that builds take multiple steps and run
   slowly. You would like to stop building the world all the time and switch to
   only rebuilding things when their inputs have changed.
 * You have implemented Bazel, Pants, or Buck, but you are finding that you
-  regularly spend an hour or more fighting the tool to get it to do something
-  you want. Hexmake is less opinionated and more general-purpose than these
-  tools and is a fit whenever you would prefer to write a little script code of
-  your own rather than  file tickets with a plugin author.
+  regularly spend an hour or more fighting the tool to get it to work
+  right for your environment. You have thought to yourself, "I could easily
+  write the script myself if only I knew where to put it".
 
 Hexmake is inspired by Make and comes with some newer features:
 
@@ -37,3 +38,8 @@ Hexmake leaves some things out on purpose:
 * It has no built-in variables or control structures. Instead,
   you should wrap Hexmake with a script in your own preferred
   scripting language such as Python, Ruby, or Node.
+* It also has no plugins, because plugins create a barrier where it
+  is hard for you to adjust how they work. Instead, any smart behavior
+  you need should be in your driver script.
+
+See [the user manual](doc/user-manual.md) if you would like to try it out.
