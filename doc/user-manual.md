@@ -15,8 +15,10 @@ Make in a few ways:
   That way, if your command depends on something you did not declare, the build
   will fail.
 
-The tool is general minimal. It does one job well---
-dependency-driven rebuilds with caching---and then leaves it to you to write
+[lex-spoon]: https://www.lexspoon.org/
+
+The tool is general minimal. It does one job
+well---dependency-driven rebuilds with caching---and then leaves it to you to write
 a script around it based on the needs of your project. Some examples are given in the `examples` directory that you can start from.
 
 ## Installation
