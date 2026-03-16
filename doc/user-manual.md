@@ -159,10 +159,9 @@ A target can be in one of two forms:
 Hexmake returns the following exit codes:
 
 * 0\. The command ran successfully.
-* 1\. The invocation was wrong in some way, e.g. a bad Hexmake file or
+* 1\. A build error occurred.
+* 2\. The invocation was wrong in some way, e.g. a bad Hexmake file or
   a bad command-line argument.
-* 2\. A build error occurred.
-
 
 ## Concepts
 
