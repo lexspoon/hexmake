@@ -10,7 +10,7 @@ use serde::Deserialize;
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct HexmakeFile {
     #[serde(default)]
-    pub environ: Vec<Arc<String>>,
+    pub env: Vec<Arc<String>>,
     pub rules: Vec<Arc<HexRule>>,
 }
 
@@ -133,7 +133,7 @@ mod tests {
         assert_eq!(
             hexmake_file,
             HexmakeFile {
-                environ: vec![],
+                env: vec![],
                 rules: vec![
                     HexRule {
                         name: "out/lib.o".to_string().into(),

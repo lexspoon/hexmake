@@ -23,9 +23,9 @@ use crate::check::file::check_file;
 use crate::error::Error;
 use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
-use crate::lock::try_lock;
 use crate::file_system::posix::PosixFileSystem;
 use crate::graph::planner::plan_build;
+use crate::lock::try_lock;
 
 fn main() {
     if let Err(error) = main_internal() {
@@ -89,7 +89,7 @@ fn list_targets(hexmake_file: &HexmakeFile) -> ! {
 fn get_environment(hexmake_file: &HexmakeFile) -> Arc<BTreeMap<Arc<String>, Arc<String>>> {
     let mut result = BTreeMap::new();
 
-    for variable in &hexmake_file.environ {
+    for variable in &hexmake_file.env {
         if let Ok(value) = env::var(variable.as_str()) {
             result.insert(variable.clone(), Arc::new(value));
         }

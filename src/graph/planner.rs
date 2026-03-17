@@ -195,7 +195,7 @@ mod tests {
     #[test]
     fn test_rule_with_multiple_outputs() {
         let hexmake_file = HexmakeFile {
-            environ: vec![],
+            env: vec![],
             rules: vec![
                 HexRule {
                     name: "foo".into(),
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn test_cycle() {
         let hexmake_file = HexmakeFile {
-            environ: vec![],
+            env: vec![],
             rules: vec![
                 HexRule {
                     name: "foo".into(),
@@ -296,7 +296,7 @@ mod tests {
     /// A Hexmake file that compiles two C files into two binaries
     fn foo_bar_hexmake_file() -> HexmakeFile {
         HexmakeFile {
-            environ: vec![],
+            env: vec![],
             rules: vec![
                 HexRule {
                     name: "foo".into(),
