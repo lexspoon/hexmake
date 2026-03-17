@@ -38,6 +38,11 @@ impl BuildCache {
         Ok(BuildCache { root, env, vfs })
     }
 
+    /// Return the environment variables that should be passed to build commands
+    pub fn env(&self) -> &Arc<BTreeMap<Arc<String>, Arc<String>>> {
+        &self.env
+    }
+
     /// Try to retrieve previously built outputs of the given rule.
     /// Return Ok(true) if there was a cache hit and the retrieval succeeded.
     pub fn retrieve_outputs(&self, rule: &HexRule) -> Result<bool, io::Error> {

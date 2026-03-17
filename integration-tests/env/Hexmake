@@ -1,0 +1,17 @@
+{
+  "env": [
+    "HEXMAKE_TEST_VAR"
+  ],
+  "rules": [
+    {
+      "name": "env-output",
+      "inputs": [],
+      "outputs": [
+        "out/env.txt"
+      ],
+      "commands": [
+        "env > out/env.txt"
+      ]
+    }
+  ]
+}

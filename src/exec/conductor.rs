@@ -112,7 +112,7 @@ fn check_cache_or_build_now(
     if build_cache.retrieve_outputs(&task.rule)? {
         println!("[{}] Retrieved outputs from cache", task.rule.name);
     } else {
-        build_rule(&task.rule, work_dir, command_logger)?;
+        build_rule(&task.rule, work_dir, command_logger, build_cache.env())?;
         build_cache.insert_outputs(&task.rule)?;
     }
 

@@ -1,4 +1,6 @@
+use std::collections::BTreeMap;
 use std::process::{Command, Stdio};
+use std::sync::Arc;
 use std::{env, io};
 
 use crate::ast::hexmake_file::HexRule;
@@ -11,6 +13,7 @@ pub fn build_rule(
     rule: &HexRule,
     work_dir: &WorkDirManager,
     command_logger: &CommandLogger,
+    env_vars: &Arc<BTreeMap<Arc<String>, Arc<String>>>,
 ) -> io::Result<()> {
     let rule_name = &rule.name;
 
@@ -37,6 +40,8 @@ pub fn build_rule(
             .arg("-c")
             .arg(command)
             .current_dir(work_dir.root())
+            .env_clear()
+            .envs(env_vars.iter().map(|(k, v)| (k.as_str(), v.as_str())))
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .output()?;

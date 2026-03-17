@@ -8,7 +8,7 @@ int main(int argc, char **argv)
   if (argc != 3) 
     {
       printf("Usage: main a b\n");
-      return 1;
+      return 2;
     }
 
 

@@ -1,4 +1,7 @@
 {
+  "env": [
+    "PATH"
+  ],
   "rules": [
     {
       "name": "lib.o",

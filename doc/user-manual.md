@@ -17,25 +17,39 @@ Make in a few ways:
 
 [lex-spoon]: https://www.lexspoon.org/
 
-The tool is general minimal. It does one job
-well---dependency-driven rebuilds with caching---and then leaves it to you to write
-a script around it based on the needs of your project. Some examples are given in the `examples` directory that you can start from.
+The tool is generally minimal. It does one job well---dependency-driven builds
+with caching---and then tries to stay out of your way. Some of the most
+aggravating experiences can be from attempting to modify a build tool that has
+bad assumptions. Hexmake tries to avoid that by only including simple, generic
+functionality that should work for any tools you want to use.
+
+There are examples in the `examples` directory that you can start from.
 
 ## Installation
 
-At the time of writing, the way to install Hexmake is to check out the
-Git repository, [install Rust], and then run `./scripts/install`.
+The easiest way to install Hexmake is via the `cargo` tool from Rust. The
+[official installation instructions][install-rust] provide a `curl` command you
+can use to install it. The tools will be placed in `~/.cargo/bin`.
 
-The plan is to eventually support `cargo install hexmake` as a shorter process for those who want to use Hexmake but not to contribute to it.
+[install-rust]: https://rust-lang.org/tools/install/
 
-## Minimal example
+Then, run `cargo install hexmake` to build and install the latest version.
+
+You can also build from source by checking out this Git repository. Run
+`./scripts/install` to build and install Hexmake from a local checkout.
+
+## Quick start
 
 Here is a simple example for building a small C program.
+Feel free to try it yourself to get a feel for how it all works.
 
 You need to make a file named `Hexmake` that has the build instructions for the
 project. Here is a basic one:
 ```json
 {
+  "env": [
+    "PATH"
+  ],
   "rules": [
     {
       "name": "lib.o",
@@ -81,7 +95,10 @@ project. Here is a basic one:
 }
 ```
 
-There are three rules in this Hexmake file. From the top to the bottom:
+The `env` field lists the environment variables your commands may use. Anything
+not listed here will be filtered out so that builds are more repeatable.
+
+The `rules` field has three rules in it. From the top to the bottom:
 
 * The rule named `lib.o` takes `lib.c` and `lib.h` as input, and it generates a
   file `out/lib.o` as output.
@@ -114,7 +131,7 @@ Save that file as `Hexmake`, and create the three input files.
     if (argc != 3) 
       {
         printf("Usage: sum a b\n");
-        return 1;
+        return 2;
       }
 
 
@@ -206,6 +223,7 @@ the following TypeScript types.
 
 ```typescript
 type HexmakeFile = {
+  env?: string[]
   rules: Rule[]
 }
 
@@ -236,10 +254,27 @@ a build rule.
 
 ```typescript
 type HexmakeFile = {
+  env?: string[]
   rules: Rule[]
 }
 ```
-A Hexmake file is a JSON file that has a list of rules in it.
+
+A Hexmake file is a JSON file that has an optional list of allowed environment
+variables and a list of rules.
+
+The `env` field lists the names of environment variables that will be passed
+through to build commands. Build commands run with a clean environment: only
+variables named in `env` are visible to them. Any variable not listed is
+stripped out.
+
+This approach helps the build cache work accurately. Commands cannot silently
+depend on variables that were not declared. For variables that are declared,
+Hexmake knows that a build command may be using them, so it will rerun commands
+whenever any of those variables change.
+
+For example, if you allow changing `cc` options via a CFLAGS environment
+variable, then you can declare CFLAGS in the `env` field, and Hexmake will
+re-run commands whenever that flag changes.
 
 ### OutputArtifact
 
@@ -279,7 +314,6 @@ a file to be built, e.g. `hexmake main.o` rather than `hexmake out/c/main.o`.
 
 A rule should follow the rules of a source tree: it is a sequence of filenames,
 separated by the slash character, and the first component cannot be `out`.
-
 
 ### SourceTree
 
