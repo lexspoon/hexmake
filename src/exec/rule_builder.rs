@@ -51,7 +51,10 @@ pub fn build_rule(
 
         if !output.status.success() {
             // Leave the work directory intact for inspection on failure
-            return Err(io::Error::other(format!("Command failed: {command}")));
+            let work_dir_path = work_dir.root();
+            return Err(io::Error::other(format!(
+                "Command failed: {command}\n  Work directory: {work_dir_path}"
+            )));
         }
     }
 
