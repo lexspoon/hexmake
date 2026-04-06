@@ -8,6 +8,12 @@ pub fn check_file(hexmake_file: &HexmakeFile) -> Result<(), String> {
                 return Err(format!("Output `{}` is not in `out/`", output));
             }
         }
+        if rule.name.starts_with("out/") {
+            return Err(format!(
+                "Rule `{}` has a name starting with `out/`",
+                rule.name
+            ));
+        }
     }
 
     Ok(())
@@ -56,6 +62,27 @@ mod tests {
         assert_eq!(
             check_file(&hexmake_file),
             Err("Output `target/foo` is not in `out/`".to_string())
+        );
+
+        // Rule that starts with out/
+        let hexmake_file = serde_json::from_str(
+            r#"{
+                "environ": [],
+                "rules": [
+                    {
+                        "name": "out/foo",
+                        "outputs": ["out/foo"],
+                        "inputs": [],
+                        "commands": ["touch out/foo"]
+                    }
+                ]
+            }"#,
+        )
+        .unwrap();
+
+        assert_eq!(
+            check_file(&hexmake_file),
+            Err("Rule `out/foo` has a name starting with `out/`".to_string())
         );
     }
 }

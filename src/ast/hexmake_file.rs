@@ -1,5 +1,6 @@
 use std::{
     fmt::{self, Display, Formatter},
+    ops::Deref,
     sync::Arc,
 };
 
@@ -72,6 +73,14 @@ impl From<&str> for RuleName {
         RuleName {
             name: Arc::new(name.to_string()),
         }
+    }
+}
+
+impl Deref for RuleName {
+    type Target = Arc<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.name
     }
 }
 
