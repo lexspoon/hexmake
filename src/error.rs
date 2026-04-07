@@ -1,7 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 use std::io;
 
-
 /// An enum for the different kinds of errors that can happen in this tool
 pub enum Error {
     /// An error that Hexmake generates from its own code
