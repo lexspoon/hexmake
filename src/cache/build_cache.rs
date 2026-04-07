@@ -58,7 +58,10 @@ impl BuildCache {
 
         for (output_path, output_hash) in rule.outputs.iter().zip(output_hashes.iter()) {
             let cached_path = self.root.child("outputs").unwrap().child(output_hash).unwrap();
-            self.vfs.remove_file(output_path)?;
+
+            // Remove any prior existing file. Ignore errors, because
+            // the file may not exist.
+            let _ = self.vfs.remove_file(output_path);
             self.vfs.copy(&cached_path, output_path)?;
         }
 
