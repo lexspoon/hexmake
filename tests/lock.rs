@@ -8,8 +8,8 @@ use std::thread;
 #[test]
 fn test_global_lock_file() {
     // Clear the output directory and cache
-    let _ = std::fs::remove_dir_all("integration-tests/lock/out");
-    let _ = std::fs::remove_dir_all("integration-tests/lock/.hex");
+    let _ = fs_err::remove_dir_all("integration-tests/lock/out");
+    let _ = fs_err::remove_dir_all("integration-tests/lock/.hex");
 
     // Start a first hexmake instance in a background thread; it will sleep for 2 seconds.
     let first = thread::spawn(|| {

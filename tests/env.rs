@@ -1,7 +1,7 @@
 use assert_cmd::Command;
 use assert_cmd::cargo_bin;
-use std::fs::read_to_string;
-use std::fs::remove_dir_all;
+use fs_err::read_to_string;
+use fs_err::remove_dir_all;
 
 #[test]
 fn test_env_is_limited_to_declared_vars() {

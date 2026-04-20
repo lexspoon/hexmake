@@ -72,6 +72,10 @@ impl BuildCache {
             // Remove any prior existing file. Ignore errors, because
             // the file may not exist.
             let _ = self.vfs.remove_file(output_path);
+            if let Some(parent) = output_path.parent() {
+                // Create the parent if needed
+                self.vfs.create_dir_all(&parent)?;
+            }
             self.vfs.copy(&cached_path, output_path)?;
         }
 

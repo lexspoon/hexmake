@@ -7,8 +7,8 @@ use predicates::str::is_match;
 #[test]
 fn test_cache_extract_empty_out() {
     // Clear the output directory and cache
-    let _ = std::fs::remove_dir_all("examples/c-basic/out");
-    let _ = std::fs::remove_dir_all("examples/c-basic/.hex");
+    let _ = fs_err::remove_dir_all("integration-tests/cache_extract_empty_out/out");
+    let _ = fs_err::remove_dir_all("integration-tests/cache_extract_empty_out/.hex");
 
     // Build the main routine
     hexmake_command()
@@ -16,7 +16,7 @@ fn test_cache_extract_empty_out() {
         .arg("main")
         .assert()
         .success()
-        .stdout(is_match(".main. Running: cc -o out/main out/lib.o out/main.o").unwrap());
+        .stdout(is_match(".main. Running: cc -o out/c/main out/c/lib.o out/c/main.o").unwrap());
 
     // Run main
     main_command()
@@ -28,7 +28,7 @@ fn test_cache_extract_empty_out() {
         .stdout("Sum: 7\n");
 
     // Clear the out directory, but keep the cache
-    let _ = std::fs::remove_dir_all("examples/c-basic/out");
+    let _ = fs_err::remove_dir_all("integration-tests/cache_extract_empty_out/out");
 
     // Rebuild it; it should use the cache
     hexmake_command()
@@ -55,7 +55,7 @@ fn hexmake_command() -> Command {
 
 /// A command for running the main program that is built in this example
 fn main_command() -> Command {
-    Command::new("out/main")
+    Command::new("out/c/main")
 }
 
 /// Extensions to Command for this test
@@ -66,6 +66,6 @@ trait CommandExt {
 
 impl CommandExt for Command {
     fn in_test_dir(&mut self) -> &mut Self {
-        self.current_dir("examples/c-basic")
+        self.current_dir("integration-tests/cache_extract_empty_out")
     }
 }

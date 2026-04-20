@@ -1,0 +1,46 @@
+{
+  "env": [
+    "PATH"
+  ],
+  "rules": [
+    {
+      "name": "lib.o",
+      "inputs": [
+        "lib.c",
+        "lib.h"
+      ],
+      "outputs": [
+        "out/c/lib.o"
+      ],
+      "commands": [
+        "cc -o out/c/lib.o -c lib.c"
+      ]
+    },
+    {
+      "name": "main.o",
+      "inputs": [
+        "lib.h",
+        "main.c"
+      ],
+      "outputs": [
+        "out/c/main.o"
+      ],
+      "commands": [
+        "cc -o out/c/main.o -c main.c"
+      ]
+    },
+    {
+      "name": "main",
+      "inputs": [
+        "out/c/lib.o",
+        "out/c/main.o"
+      ],
+      "outputs": [
+        "out/c/main"
+      ],
+      "commands": [
+        "cc -o out/c/main out/c/lib.o out/c/main.o"
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-use std::fs::{copy, create_dir_all, remove_dir_all};
+use fs_err::{copy, create_dir_all, remove_dir_all};
 use std::io;
 use std::path::{Path, PathBuf};
 
@@ -128,7 +128,8 @@ fn copy_one_file(src: &Path, dst: PathBuf) -> Result<(), io::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{self, File};
+    use fs_err as fs;
+    use fs_err::{self, File};
     use std::io::Write;
 
     /// Create a test directory structure and clean it up after the test
@@ -304,7 +305,7 @@ mod tests {
             assert_eq!(content, "result");
 
             // Clean up
-            fs::remove_dir_all("out").unwrap();
+            fs_err::remove_dir_all("out").unwrap();
         });
     }
 

@@ -5,8 +5,8 @@ use predicates::str::is_match;
 #[test]
 fn test_basics() {
     // Clear the output directory and cache
-    let _ = std::fs::remove_dir_all("integration-tests/output-not-in-out/out");
-    let _ = std::fs::remove_dir_all("integration-tests/output-not-in-out/.hex");
+    let _ = fs_err::remove_dir_all("integration-tests/output-not-in-out/out");
+    let _ = fs_err::remove_dir_all("integration-tests/output-not-in-out/.hex");
 
     // Try to build; it should error out
     hexmake_command()

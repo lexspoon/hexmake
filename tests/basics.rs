@@ -5,8 +5,8 @@ use predicates::str::is_match;
 #[test]
 fn test_basics() {
     // Clear the output directory and cache
-    let _ = std::fs::remove_dir_all("examples/c-basic/out");
-    let _ = std::fs::remove_dir_all("examples/c-basic/.hex");
+    let _ = fs_err::remove_dir_all("examples/c-basic/out");
+    let _ = fs_err::remove_dir_all("examples/c-basic/.hex");
 
     // Build the main routine
     hexmake_command()

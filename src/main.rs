@@ -12,7 +12,7 @@ mod lock;
 use clap::Parser;
 use std::collections::BTreeMap;
 use std::env;
-use std::fs::read_to_string;
+use fs_err::read_to_string;
 use std::process::exit;
 use std::sync::Arc;
 

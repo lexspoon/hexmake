@@ -25,6 +25,17 @@ impl HexPath {
     pub fn child(&self, child_path: &str) -> Result<HexPath, String> {
         HexPath::try_from(format!("{}/{}", self.path, child_path))
     }
+
+    pub fn parent(&self) -> Option<HexPath> {
+        match self.path.rfind('/') {
+            None => {
+                // No slash found, so there is no way to compute a parent
+                None
+            }
+
+            Some(last_slash) => Some(HexPath::new(Arc::new(self.path[0..last_slash].to_string()))),
+        }
+    }
 }
 
 impl TryFrom<&str> for HexPath {
@@ -151,5 +162,17 @@ mod tests {
             HexPath::try_from("foo/../bar").unwrap_err(),
             "Path `foo/../bar` contains `..` as a component"
         );
+    }
+
+    #[test]
+    fn test_parent() {
+        // Happy case
+        assert_eq!(
+            HexPath::try_from("out/rust/main").unwrap().parent(),
+            Some(HexPath::try_from("out/rust").unwrap())
+        );
+
+        // No slash
+        assert_eq!(HexPath::try_from("out").unwrap().parent(), None);
     }
 }

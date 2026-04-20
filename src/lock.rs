@@ -1,4 +1,4 @@
-use std::fs::{File, create_dir_all};
+use fs_err::{File, create_dir_all};
 
 use crate::error::Error;
 

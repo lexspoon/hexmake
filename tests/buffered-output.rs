@@ -1,9 +1,9 @@
 use assert_cmd::Command;
 use assert_cmd::cargo_bin;
+use fs_err as fs;
 use indoc::indoc;
 use pretty_assertions::assert_eq;
 use regex::Regex;
-use std::fs;
 
 #[test]
 fn test_buffered_output_no_interleaving() {
