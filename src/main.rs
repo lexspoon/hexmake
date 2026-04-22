@@ -10,9 +10,9 @@ mod graph;
 mod lock;
 
 use clap::Parser;
+use fs_err::read_to_string;
 use std::collections::BTreeMap;
 use std::env;
-use fs_err::read_to_string;
 use std::process::exit;
 use std::sync::Arc;
 
@@ -25,7 +25,7 @@ use crate::error_exit::error_exit;
 use crate::exec::conductor::conduct_build;
 use crate::file_system::posix::PosixFileSystem;
 use crate::graph::planner::plan_build;
-use crate::lock::try_lock;
+use crate::lock::obtain_lock;
 
 fn main() {
     if let Err(error) = main_internal() {
@@ -42,7 +42,7 @@ fn main_internal() -> Result<(), Error> {
         list_targets(&hexmake_file);
     }
 
-    let _hex_lock = try_lock()?;
+    let _hex_lock = obtain_lock()?;
     let plan = plan_build(&hexmake_file, &args.targets)?;
     let env = get_environment(&hexmake_file);
 

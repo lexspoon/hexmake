@@ -1,6 +1,6 @@
 [package]
 name = "hexmake"
-version = "1.0.12"
+version = "1.0.13"
 license = "MIT-0"
 description = "Run a multi-step build with caching"
 homepage = "https://github.com/lexspoon/hexmake"
